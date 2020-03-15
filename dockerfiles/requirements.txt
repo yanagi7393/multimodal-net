@@ -8,3 +8,4 @@ pandas
 librosa
 moviepy
 torch_stft
+intervaltree
