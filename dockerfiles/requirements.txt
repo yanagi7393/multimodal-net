@@ -1,0 +1,10 @@
+fire
+black
+joblib
+ipython
+jupyterlab
+numpy
+pandas
+librosa
+moviepy
+torch_stft
