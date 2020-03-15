@@ -3,7 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 
 
-class SelfAttention1d(nn.Module):
+class SelfAttention2d(nn.Module):
     def __init__(self, in_channels):
         super().__init__()
         self.f = nn.Sequential(
