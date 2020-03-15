@@ -1,5 +1,5 @@
-# 1. Project1: (Conversion) Sound -> Image (1 Model)
+## 1. Project1: Sound -> Image
 
-# 2. Project2: (Conversion) Sound <-> Image Cycle (2 Models)
+## 2. Project2: Sound <-> Image Cycle 
 
-# 3. Project3: (Conversion) Input: Sound or Image -> <SameModel> <Similar latent vector> -> output: Sound or Image (1 Model)
+## 3. Project3: Any(Sound or Image) -> Inner similar vector
