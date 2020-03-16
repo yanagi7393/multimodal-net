@@ -3,28 +3,27 @@ from torch_stft import STFT
 import numpy as np
 import librosa
 import matplotlib.pyplot as plt
-
-
-def load_audio(
-    path, offset=0.0, duration=None
-):  # offset and duration is already handled on VideoSplitter side.
-    return librosa.load(path, offset=offset, duration=duration)[0]
+from .utils import load_audio
 
 
 def transform_stft(
-    audio,
+    audio_list,
     hop_length=256,
     win_length=1024,
     window="hann",
     device="cpu",
-    get_tensor=False,
+    input_tensor=False,
+    output_tensor=False,
 ):
     # hop_length is overlap length of window. Generally it use win_length//4
     filter_length = win_length
 
-    audio = torch.FloatTensor(audio)
-    audio = audio.unsqueeze(0)
-    audio = audio.to(device)
+    if input_tensor is False:
+        audio_list = [torch.FloatTensor(audio) for audio in audio_list]
+
+    audio_list = [audio.unsqueeze(0) for audio in audio_list]
+    audio_cat = torch.cat(audio_list, dim=0)
+    audio_cat = audio_cat.to(device)
 
     stft = STFT(
         filter_length=filter_length,
@@ -33,27 +32,38 @@ def transform_stft(
         window=window,
     ).to(device)
 
-    magnitude, phase = stft.transform(audio)
-    if get_tensor is True:
-        return magnitude, phase
+    magnitudes, phases = stft.transform(audio_cat)
+    magnitudes = torch.split(magnitudes, dim=0)
+    phases = torch.split(phases, dim=0)
 
-    return magnitude.cpu().numpy(), phase.cpu().numpy()
+    if output_tensor is True:
+        return magnitudes, phases
+
+    return (
+        [magnitude.cpu().numpy() for magnitude in magnitudes],
+        [phase.cpu().numpy() for phase in phases],
+    )
 
 
 def inverse_stft(
-    magnitude,
-    phase,
+    magnitude_list,
+    phase_list,
     hop_length=256,
     win_length=1024,
     window="hann",
     device="cpu",
-    get_tensor=False,
+    input_tensor=False,
+    output_tensor=False,
 ):
     # hop_length is overlap length of window. Generally it use win_length//4
     filter_length = win_length
 
-    magnitude = torch.FloatTensor(magnitude).to(device)
-    phase = torch.FloatTensor(phase).to(device)
+    if input_tensor is False:
+        magnitude_list = [torch.FloatTensor(magnitude) for magnitude in magnitude_list]
+        phase_list = [torch.FloatTensor(phase) for phase in phase_list]
+
+    magnitude_cat = torch.cat(magnitude_list, dim=0)
+    phase_cat = torch.cat(phase_list, dim=0)
 
     stft = STFT(
         filter_length=filter_length,
@@ -62,9 +72,10 @@ def inverse_stft(
         window=window,
     ).to(device)
 
-    reconstructed_audio = stft.inverse(magnitude, phase)
+    reconstructed_audio = stft.inverse(magnitude_cat, phase_cat)
+    reconstructed_audio = torch.split(reconstructed_audio, dim=0)
 
-    if get_tensor is True:
+    if output_tensor is True:
         return reconstructed_audio
 
-    return reconstructed_audio.cpu().numpy()
+    return [r_audio.cpu().numpy() for r_audio in reconstructed_audio]

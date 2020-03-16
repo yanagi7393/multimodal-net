@@ -50,6 +50,13 @@ class VideoSplitter:
 
         video.close()
 
+        return {
+            "frame_path": [
+                get_frame_path(index=idx) for idx in range(len(pick_frame_times))
+            ],
+            "sound_path": [sound_path],
+        }
+
     def splits(
         self,
         video_path_list,
