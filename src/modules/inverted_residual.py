@@ -4,6 +4,14 @@ from ml.torch.modules.norms import NORMS
 from ml.torch.modules.seblock import SEBlock
 
 
+def perform_sn(module, sn=False):
+    if sn is False:
+        return module
+
+    if sn is True:
+        return nn.utils.spectral_norm(module)
+
+
 class InvertedRes2d(nn.Module):
     """
     Inverted Residual block # MobileNetV2
@@ -26,6 +34,7 @@ class InvertedRes2d(nn.Module):
         normalization="bn",
         downscale=False,
         seblock=False,
+        sn=False,
     ):
         super().__init__()
         if planes <= in_channels:
@@ -41,37 +50,46 @@ class InvertedRes2d(nn.Module):
 
         if normalization is not None:
             self.n1 = NORMS[normalization.upper()](num_channels=in_channels)
-        self.conv1 = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=planes,
-            kernel_size=1,
-            bias=False,
-            padding=0,
-            stride=1,
+        self.conv1 = perform_sn(
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=planes,
+                kernel_size=1,
+                bias=False,
+                padding=0,
+                stride=1,
+            ),
+            sn=sn,
         )
 
         if normalization is not None:
             self.n2 = NORMS[normalization.upper()](num_channels=planes)
-        self.conv2 = nn.Conv2d(
-            in_channels=planes,
-            out_channels=planes,
-            kernel_size=3,
-            dilation=dilation,
-            bias=False,
-            padding=1,
-            stride=stride,
-            groups=planes,
+        self.conv2 = perform_sn(
+            nn.Conv2d(
+                in_channels=planes,
+                out_channels=planes,
+                kernel_size=3,
+                dilation=dilation,
+                bias=False,
+                padding=1,
+                stride=stride,
+                groups=planes,
+            ),
+            sn=sn,
         )
 
         if normalization is not None:
             self.n3 = NORMS[normalization.upper()](num_channels=planes)
-        self.conv3 = nn.Conv2d(
-            in_channels=planes,
-            out_channels=out_channels,
-            kernel_size=1,
-            bias=False,
-            padding=0,
-            stride=1,
+        self.conv3 = perform_sn(
+            nn.Conv2d(
+                in_channels=planes,
+                out_channels=out_channels,
+                kernel_size=1,
+                bias=False,
+                padding=0,
+                stride=1,
+            ),
+            sn=sn,
         )
 
         self.seblock = None
@@ -80,33 +98,42 @@ class InvertedRes2d(nn.Module):
 
         if downscale is True:
             if in_channels == out_channels:
-                self.conv4 = nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    bias=False,
-                    padding=1,
-                    stride=stride,
-                    groups=in_channels,
+                self.conv4 = perform_sn(
+                    nn.Conv2d(
+                        in_channels=in_channels,
+                        out_channels=out_channels,
+                        kernel_size=3,
+                        bias=False,
+                        padding=1,
+                        stride=stride,
+                        groups=in_channels,
+                    ),
+                    sn=sn,
                 )
             else:
-                self.conv4 = nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    bias=False,
-                    padding=1,
-                    stride=stride,
+                self.conv4 = perform_sn(
+                    nn.Conv2d(
+                        in_channels=in_channels,
+                        out_channels=out_channels,
+                        kernel_size=3,
+                        bias=False,
+                        padding=1,
+                        stride=stride,
+                    ),
+                    sn=sn,
                 )
 
         elif in_channels != out_channels:
-            self.conv4 = nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=1,
-                bias=False,
-                padding=0,
-                stride=1,
+            self.conv4 = perform_sn(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=1,
+                    bias=False,
+                    padding=0,
+                    stride=1,
+                ),
+                sn=sn,
             )
         else:
             self.conv4 = None

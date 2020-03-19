@@ -31,6 +31,7 @@ class FirstBlockDown2d(nn.Module):
         seblock=False,
         init_channels=None,
         init_normalization=None,
+        sn=False,
     ):
         super().__init__()
 
@@ -43,13 +44,16 @@ class FirstBlockDown2d(nn.Module):
 
         self.channel_compressor = None
         if (init_channels is not None) and (init_channels != in_channels):
-            self.channel_compressor = nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=init_channels,
-                kernel_size=1,
-                bias=False,
-                padding=0,
-                stride=1,
+            self.channel_compressor = perform_sn(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=init_channels,
+                    kernel_size=1,
+                    bias=False,
+                    padding=0,
+                    stride=1,
+                ),
+                sn=sn,
             )
 
             if init_normalization is not None:
@@ -57,26 +61,32 @@ class FirstBlockDown2d(nn.Module):
 
             in_channels = init_channels
 
-        self.conv1 = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            dilation=dilation,
-            bias=False,
-            padding=1,
-            stride=stride,
+        self.conv1 = perform_sn(
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=3,
+                dilation=dilation,
+                bias=False,
+                padding=1,
+                stride=stride,
+            ),
+            sn=sn,
         )
         if normalization is not None:
             self.n1 = NORMS[normalization.upper()](num_channels=out_channels)
 
-        self.conv2 = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            dilation=dilation,
-            bias=False,
-            padding=1,
-            stride=1,
+        self.conv2 = perform_sn(
+            nn.Conv2d(
+                in_channels=out_channels,
+                out_channels=out_channels,
+                kernel_size=3,
+                dilation=dilation,
+                bias=False,
+                padding=1,
+                stride=1,
+            ),
+            sn=sn,
         )
 
         self.seblock = None
@@ -85,34 +95,43 @@ class FirstBlockDown2d(nn.Module):
 
         if downscale is True:
             if in_channels == out_channels:
-                self.conv3 = nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    bias=False,
-                    padding=1,
-                    stride=stride,
-                    groups=in_channels,
+                self.conv3 = perform_sn(
+                    nn.Conv2d(
+                        in_channels=in_channels,
+                        out_channels=out_channels,
+                        kernel_size=3,
+                        bias=False,
+                        padding=1,
+                        stride=stride,
+                        groups=in_channels,
+                    ),
+                    sn=sn,
                 )
 
             else:
-                self.conv3 = nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    bias=False,
-                    padding=1,
-                    stride=stride,
+                self.conv3 = perform_sn(
+                    nn.Conv2d(
+                        in_channels=in_channels,
+                        out_channels=out_channels,
+                        kernel_size=3,
+                        bias=False,
+                        padding=1,
+                        stride=stride,
+                    ),
+                    sn=sn,
                 )
 
         elif in_channels != out_channels:
-            self.conv3 = nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=1,
-                bias=False,
-                padding=0,
-                stride=1,
+            self.conv3 = perform_sn(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=1,
+                    bias=False,
+                    padding=0,
+                    stride=1,
+                ),
+                sn=sn,
             )
 
         else:
@@ -169,6 +188,7 @@ class BlockDown2d(nn.Module):
         normalization="bn",
         downscale=False,
         seblock=False,
+        sn=False,
     ):
         super().__init__()
 
@@ -180,26 +200,32 @@ class BlockDown2d(nn.Module):
 
         if normalization is not None:
             self.n1 = NORMS[normalization.upper()](num_channels=in_channels)
-        self.conv1 = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            dilation=dilation,
-            bias=False,
-            padding=1,
-            stride=stride,
+        self.conv1 = perform_sn(
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=3,
+                dilation=dilation,
+                bias=False,
+                padding=1,
+                stride=stride,
+            ),
+            sn=sn,
         )
 
         if normalization is not None:
             self.n2 = NORMS[normalization.upper()](num_channels=out_channels)
-        self.conv2 = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            dilation=dilation,
-            bias=False,
-            padding=1,
-            stride=1,
+        self.conv2 = perform_sn(
+            nn.Conv2d(
+                in_channels=out_channels,
+                out_channels=out_channels,
+                kernel_size=3,
+                dilation=dilation,
+                bias=False,
+                padding=1,
+                stride=1,
+            ),
+            sn=sn,
         )
 
         self.seblock = None
@@ -208,34 +234,43 @@ class BlockDown2d(nn.Module):
 
         if downscale is True:
             if in_channels == out_channels:
-                self.conv3 = nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    bias=False,
-                    padding=1,
-                    stride=stride,
-                    groups=in_channels,
+                self.conv3 = perform_sn(
+                    nn.Conv2d(
+                        in_channels=in_channels,
+                        out_channels=out_channels,
+                        kernel_size=3,
+                        bias=False,
+                        padding=1,
+                        stride=stride,
+                        groups=in_channels,
+                    ),
+                    sn=sn,
                 )
 
             else:
-                self.conv3 = nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    bias=False,
-                    padding=1,
-                    stride=stride,
+                self.conv3 = perform_sn(
+                    nn.Conv2d(
+                        in_channels=in_channels,
+                        out_channels=out_channels,
+                        kernel_size=3,
+                        bias=False,
+                        padding=1,
+                        stride=stride,
+                    ),
+                    sn=sn,
                 )
 
         elif in_channels != out_channels:
-            self.conv3 = nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=1,
-                bias=False,
-                padding=0,
-                stride=1,
+            self.conv3 = perform_sn(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=1,
+                    bias=False,
+                    padding=0,
+                    stride=1,
+                ),
+                sn=sn,
             )
 
         else:
@@ -288,6 +323,7 @@ class BlockUpsample2d(nn.Module):
         activation="relu",
         normalization="bn",
         seblock=False,
+        sn=False,
     ):
         super().__init__()
 
@@ -302,6 +338,7 @@ class BlockUpsample2d(nn.Module):
             normalization=normalization,
             downscale=False,
             seblock=seblock,
+            sn=sn,
         )
 
         def forward(self, x):
@@ -332,6 +369,7 @@ class BlockUp2d(nn.Module):
         normalization="bn",
         upscale=False,
         seblock=False,
+        sn=False,
     ):
         super().__init__()
 
@@ -343,33 +381,8 @@ class BlockUp2d(nn.Module):
 
         if normalization is not None:
             self.n1 = NORMS[normalization.upper()](num_channels=in_channels)
-        self.deconv1 = nn.ConvTranspose2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            bias=False,
-            padding=1,
-            stride=stride,
-            output_padding=int(stride > 1),
-        )
-
-        if normalization is not None:
-            self.n2 = NORMS[normalization.upper()](num_channels=out_channels)
-        self.deconv2 = nn.ConvTranspose2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            bias=False,
-            padding=1,
-            stride=1,
-        )
-
-        self.seblock = None
-        if seblock is True:
-            self.seblock = SEBlock(in_channels=out_channels, activation=activation)
-
-        if upscale is True:
-            self.deconv3 = nn.ConvTranspose2d(
+        self.deconv1 = perform_sn(
+            nn.ConvTranspose2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=3,
@@ -377,16 +390,53 @@ class BlockUp2d(nn.Module):
                 padding=1,
                 stride=stride,
                 output_padding=int(stride > 1),
+            ),
+            sn=sn,
+        )
+
+        if normalization is not None:
+            self.n2 = NORMS[normalization.upper()](num_channels=out_channels)
+        self.deconv2 = perform_sn(
+            nn.ConvTranspose2d(
+                in_channels=out_channels,
+                out_channels=out_channels,
+                kernel_size=3,
+                bias=False,
+                padding=1,
+                stride=1,
+            ),
+            sn=sn,
+        )
+
+        self.seblock = None
+        if seblock is True:
+            self.seblock = SEBlock(in_channels=out_channels, activation=activation)
+
+        if upscale is True:
+            self.deconv3 = perform_sn(
+                nn.ConvTranspose2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=3,
+                    bias=False,
+                    padding=1,
+                    stride=stride,
+                    output_padding=int(stride > 1),
+                ),
+                sn=sn,
             )
 
         elif in_channels != out_channels:
-            self.deconv3 = nn.ConvTranspose2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=1,
-                bias=False,
-                padding=0,
-                stride=1,
+            self.deconv3 = perform_sn(
+                nn.ConvTranspose2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=1,
+                    bias=False,
+                    padding=0,
+                    stride=1,
+                ),
+                sn=sn,
             )
 
         else:
@@ -441,6 +491,7 @@ class BottleneckBlockDown2d(nn.Module):
         normalization="bn",
         downscale=False,
         seblock=False,
+        sn=False,
     ):
         super().__init__()
 
@@ -452,36 +503,45 @@ class BottleneckBlockDown2d(nn.Module):
 
         if normalization is not None:
             self.n1 = NORMS[normalization.upper()](num_channels=in_channels)
-        self.conv1 = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=planes,
-            kernel_size=1,
-            bias=False,
-            padding=0,
-            stride=1,
+        self.conv1 = perform_sn(
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=planes,
+                kernel_size=1,
+                bias=False,
+                padding=0,
+                stride=1,
+            ),
+            sn=sn,
         )
 
         if normalization is not None:
             self.n2 = NORMS[normalization.upper()](num_channels=planes)
-        self.conv2 = nn.Conv2d(
-            in_channels=planes,
-            out_channels=planes,
-            kernel_size=3,
-            dilation=dilation,
-            bias=False,
-            padding=1,
-            stride=stride,
+        self.conv2 = perform_sn(
+            nn.Conv2d(
+                in_channels=planes,
+                out_channels=planes,
+                kernel_size=3,
+                dilation=dilation,
+                bias=False,
+                padding=1,
+                stride=stride,
+            ),
+            sn=sn,
         )
 
         if normalization is not None:
             self.n3 = NORMS[normalization.upper()](num_channels=planes)
-        self.conv3 = nn.Conv2d(
-            in_channels=planes,
-            out_channels=out_channels,
-            kernel_size=1,
-            bias=False,
-            padding=0,
-            stride=1,
+        self.conv3 = perform_sn(
+            nn.Conv2d(
+                in_channels=planes,
+                out_channels=out_channels,
+                kernel_size=1,
+                bias=False,
+                padding=0,
+                stride=1,
+            ),
+            sn=sn,
         )
 
         self.seblock = None
@@ -490,33 +550,42 @@ class BottleneckBlockDown2d(nn.Module):
 
         if downscale is True:
             if in_channels == out_channels:
-                self.conv4 = nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    bias=False,
-                    padding=1,
-                    stride=stride,
-                    groups=in_channels,
+                self.conv4 = perform_sn(
+                    nn.Conv2d(
+                        in_channels=in_channels,
+                        out_channels=out_channels,
+                        kernel_size=3,
+                        bias=False,
+                        padding=1,
+                        stride=stride,
+                        groups=in_channels,
+                    ),
+                    sn=sn,
                 )
             else:
-                self.conv4 = nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    bias=False,
-                    padding=1,
-                    stride=stride,
+                self.conv4 = perform_sn(
+                    nn.Conv2d(
+                        in_channels=in_channels,
+                        out_channels=out_channels,
+                        kernel_size=3,
+                        bias=False,
+                        padding=1,
+                        stride=stride,
+                    ),
+                    sn=sn,
                 )
 
         elif in_channels != out_channels:
-            self.conv4 = nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=1,
-                bias=False,
-                padding=0,
-                stride=1,
+            self.conv4 = perform_sn(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=1,
+                    bias=False,
+                    padding=0,
+                    stride=1,
+                ),
+                sn=sn,
             )
         else:
             self.conv4 = None
@@ -573,6 +642,7 @@ class BottleneckBlockUpsample2d(nn.Module):
         activation="relu",
         normalization="bn",
         seblock=False,
+        sn=False,
     ):
         super().__init__()
 
@@ -588,6 +658,7 @@ class BottleneckBlockUpsample2d(nn.Module):
             normalization=normalization,
             downscale=False,
             seblock=seblock,
+            sn=sn,
         )
 
         def forward(self, x):
@@ -619,6 +690,7 @@ class BottleneckBlockUp2d(nn.Module):
         normalization="bn",
         upscale=False,
         seblock=False,
+        sn=False,
     ):
         super().__init__()
 
@@ -631,36 +703,45 @@ class BottleneckBlockUp2d(nn.Module):
 
         if normalization is not None:
             self.n1 = NORMS[normalization.upper()](num_channels=in_channels)
-        self.deconv1 = nn.ConvTranspose2d(
-            in_channels=in_channels,
-            out_channels=planes,
-            kernel_size=1,
-            bias=False,
-            padding=0,
-            stride=1,
+        self.deconv1 = perform_sn(
+            nn.ConvTranspose2d(
+                in_channels=in_channels,
+                out_channels=planes,
+                kernel_size=1,
+                bias=False,
+                padding=0,
+                stride=1,
+            ),
+            sn=sn,
         )
 
         if normalization is not None:
             self.n2 = NORMS[normalization.upper()](num_channels=planes)
-        self.deconv2 = nn.ConvTranspose2d(
-            in_channels=planes,
-            out_channels=planes,
-            kernel_size=3,
-            bias=False,
-            padding=1,
-            stride=stride,
-            output_padding=int(stride > 1),
+        self.deconv2 = perform_sn(
+            nn.ConvTranspose2d(
+                in_channels=planes,
+                out_channels=planes,
+                kernel_size=3,
+                bias=False,
+                padding=1,
+                stride=stride,
+                output_padding=int(stride > 1),
+            ),
+            sn=sn,
         )
 
         if normalization is not None:
             self.n3 = NORMS[normalization.upper()](num_channels=planes)
-        self.deconv3 = nn.ConvTranspose2d(
-            in_channels=planes,
-            out_channels=out_channels,
-            kernel_size=1,
-            bias=False,
-            padding=0,
-            stride=1,
+        self.deconv3 = perform_sn(
+            nn.ConvTranspose2d(
+                in_channels=planes,
+                out_channels=out_channels,
+                kernel_size=1,
+                bias=False,
+                padding=0,
+                stride=1,
+            ),
+            sn=sn,
         )
 
         self.seblock = None
@@ -668,24 +749,30 @@ class BottleneckBlockUp2d(nn.Module):
             self.seblock = SEBlock(in_channels=out_channels, activation=activation)
 
         if upscale is True:
-            self.deconv4 = nn.ConvTranspose2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=3,
-                bias=False,
-                padding=1,
-                stride=stride,
-                output_padding=int(stride > 1),
+            self.deconv4 = perform_sn(
+                nn.ConvTranspose2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=3,
+                    bias=False,
+                    padding=1,
+                    stride=stride,
+                    output_padding=int(stride > 1),
+                ),
+                sn=sn,
             )
 
         elif in_channels != out_channels:
-            self.deconv4 = nn.ConvTranspose2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=1,
-                bias=False,
-                padding=0,
-                stride=1,
+            self.deconv4 = perform_sn(
+                nn.ConvTranspose2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=1,
+                    bias=False,
+                    padding=0,
+                    stride=1,
+                ),
+                sn=sn,
             )
 
         else:
