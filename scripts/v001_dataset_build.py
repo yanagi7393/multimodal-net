@@ -6,6 +6,7 @@ from datasets.rawdataset import RawDataset
 from torch.utils.data import DataLoader
 from dataset_builder.utils import parallelize
 import os
+from datasets.dataset import FILENAME_TEMPLATE
 
 DEFAULT_CONFIG = {
     "hop_length": 256,
@@ -21,19 +22,17 @@ def expand(mat):
     expanded = np.hstack((mat, expand_vec, expand_vec))
     return expanded
 
-def save_files(frame, audio, log_mel_spec, mel_if, dirs, file_index):
-    np.save(frame, os.path.join(dirs['frame'], f'{file_index}_frame.npy'))
-    np.save(audio, os.path.join(dirs['audio'], f'{file_index}_audio.npy'))
-    np.save(log_mel_spec, os.path.join(dirs['log_mel_spec'], f'{file_index}_log_mel_spec.npy'))
-    np.save(mel_if, os.path.join(dirs['mel_if'], f'{file_index}_mel_if.npy'))
+def save_files(data_dict, dirs, file_index):
+    for data_type in FILENAME_TEMPLATE.keys():
+        np.save(data_dict[data_type], os.path.join(dirs[data_type], FILENAME_TEMPLATE['data_type'].format(file_index)))
 
 def video_to_datasets(video_path_list, save_dir="./dataset", device="cpu"):
-    dirs = {data_type : os.path.join(save_dir, data_type) for data_type in  ["frame", "audio", "log_mel_spec", "mel_if"]}
+    dirs = {data_type : os.path.join(save_dir, data_type) for data_type in FILENAME_TEMPLATE.keys()}
 
     for _, dir in dirs.items():
         os.makedirs(dir, exist_ok=True)
 
-    raw_data = RawDataset(video_path_list=video_path_list, transform={})
+    raw_data = RawDataset(video_path_list=video_path_list, transforms={})
     data_loader = DataLoader(dataset=raw_data, batch_size=DEFAULT_CONFIG['batch_size'], shuffle=DEFAULT_CONFIG["shuffle"])
 
     i = 0
@@ -71,7 +70,7 @@ def video_to_datasets(video_path_list, save_dir="./dataset", device="cpu"):
         frame_list = [frame.cpu().numpy() for frame in frame_list]
         audio_list = [audio.cpu().numpy() for audio in audio_list]
 
-        params = [{"frame": frame, "audio": audio, "log_mel_spec": log_mel_spec, "mel_if": mel_if, "dirs": dirs, "file_index": i + idx} for idx, (frame, audio, log_mel_spec, mel_if) in enumerate(zip([frame_list, audio_list, log_mel_spec_list, mel_if_list]))]
+        params = [{"data_dict": {"frame": frame, "audio": audio, "log_mel_spec": log_mel_spec, "mel_if": mel_if}, "dirs": dirs, "file_index": i + idx} for idx, (frame, audio, log_mel_spec, mel_if) in enumerate(zip([frame_list, audio_list, log_mel_spec_list, mel_if_list]))]
 
         # save files with parallel
         parallelize(func=save_files, params=params, n_jobs=64)

@@ -11,10 +11,10 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 
-ADD dockerfiles/pybase/requirements.txt requirements.txt
+ADD dockerfiles/requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
 ADD . /app
 WORKDIR /app
 
-ENV PYTHONPATH $PYTHONPATH:/app
+ENV PYTHONPATH $PYTHONPATH:/app:/app/src

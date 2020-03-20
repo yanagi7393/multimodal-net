@@ -2,6 +2,7 @@ import os
 import random
 from pathlib import Path
 from moviepy.editor import VideoFileClip
+from moviepy.video.fx.all import crop
 from .utils import parallelize
 
 
@@ -35,7 +36,12 @@ class VideoSplitter:
         video = video.subclip(start_time, end_time)
         assert video.duration == duration
 
-        video = video.resize(width=frame_size, height=frame_size)
+        # crop and resize
+        (w, h) = video.size
+        min_size = min(w, h)
+        video = crop(
+            video, width=min_size, height=min_size, x_center=w / 2, y_center=h / 2
+        ).resize(width=frame_size, height=frame_size)
 
         # frame part
         pick_frame_times = random.sample(range(start_time, end_time), n_frames)

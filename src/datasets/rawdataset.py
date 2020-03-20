@@ -5,13 +5,14 @@ from PIL import Image
 from dataset_builder.utils import load_audio
 import torchvision
 from typing import Dict, List
+import numpy as np
 
 
 class RawDataset(Dataset):
-    def __init__(self, video_path_list: List, transform: Dict = {}, **params):
+    def __init__(self, video_path_list: List, transforms: Dict = {}, **params):
         self.video_path_list = video_path_list
         self.params = params
-        self.transform = transform
+        self.transforms = transforms
 
     def __len__(self):
         return len(self.video_path_list)
@@ -26,13 +27,13 @@ class RawDataset(Dataset):
             if paths is None:
                 return None, None
 
-            image = Image.open(paths["frame_path"][-1])
+            image = np.array(Image.open(paths["frame_path"][-1]))
             sound = load_audio(path=paths["sound_path"][-1])
 
-        if self.transform.get("frame"):
-            image = self.transform.get("frame")(image)
+        if self.transforms.get("frame"):
+            image = self.transforms.get("frame")(image)
 
-        if self.transform.get("sound"):
-            sound = self.transform.get("sound")(sound)
+        if self.transforms.get("sound"):
+            sound = self.transforms.get("sound")(sound)
 
         return image, sound
