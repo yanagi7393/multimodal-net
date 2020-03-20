@@ -1,16 +1,21 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from .norms import perform_sn
 
 
 class SEBlock(nn.Module):
-    def __init__(self, in_channels, reduction=16, activation="relu"):
+    def __init__(self, in_channels, reduction=16, activation="relu", sn=False):
         super(SEBlock, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d([1, 1])
         self.fc = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels // reduction, 1, bias=False),
+            perform_sn(
+                nn.Conv2d(in_channels, in_channels // reduction, 1, bias=False), sn=sn
+            ),
             getattr(F, activation),
-            nn.Conv2d(in_channels // reduction, in_channels, 1, bias=False),
+            perform_sn(
+                nn.Conv2d(in_channels // reduction, in_channels, 1, bias=False), sn=sn
+            ),
             nn.Sigmoid(),
         )
 

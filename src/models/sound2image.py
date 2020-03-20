@@ -3,10 +3,11 @@ import torch.nn as nn
 from torch.nn import functional as F
 from modules.inverted_residual import InvertedRes2d
 from modules.residual import FirstBlockDown2d, BlockUpsample2d
+from modules.self_attention import SelfAttention2d
 
 
 class Generator(nn.Module):
-    def __init__(self):
+    def __init__(self, self_attention=True, sn=False):
         super().__init__()
 
         # DOWN:
@@ -17,7 +18,7 @@ class Generator(nn.Module):
             normalization="IN",
             downscale=False,
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.dn_block2 = InvertedRes2d(
@@ -29,7 +30,7 @@ class Generator(nn.Module):
             normalization="IN",
             downscale=True,
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.dn_block3 = InvertedRes2d(
@@ -41,7 +42,7 @@ class Generator(nn.Module):
             normalization="IN",
             downscale=True,
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.dn_block4 = InvertedRes2d(
@@ -53,7 +54,7 @@ class Generator(nn.Module):
             normalization="IN",
             downscale=True,
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.dn_block5 = InvertedRes2d(
@@ -65,7 +66,7 @@ class Generator(nn.Module):
             normalization="IN",
             downscale=True,
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.dn_block6 = InvertedRes2d(
@@ -77,7 +78,7 @@ class Generator(nn.Module):
             normalization="IN",
             downscale=True,
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.dn_block7 = InvertedRes2d(
@@ -89,7 +90,7 @@ class Generator(nn.Module):
             normalization="IN",
             downscale=True,
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.dn_block8 = InvertedRes2d(
@@ -101,7 +102,7 @@ class Generator(nn.Module):
             normalization="IN",
             downscale=True,
             seblock=True,
-            sn=False,
+            sn=sn,
         )
 
         # SKIP:
@@ -146,7 +147,7 @@ class Generator(nn.Module):
             activation="relu",
             normalization="BIN",
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.up_block2 = BlockUpsample2d(
@@ -156,7 +157,7 @@ class Generator(nn.Module):
             activation="relu",
             normalization="BIN",
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.up_block3 = BlockUpsample2d(
@@ -166,7 +167,7 @@ class Generator(nn.Module):
             activation="relu",
             normalization="BIN",
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.up_block4 = BlockUpsample2d(
@@ -176,7 +177,7 @@ class Generator(nn.Module):
             activation="relu",
             normalization="BIN",
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.up_block5 = BlockUpsample2d(
@@ -186,7 +187,7 @@ class Generator(nn.Module):
             activation="relu",
             normalization="BIN",
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.up_block6 = BlockUpsample2d(
@@ -196,8 +197,12 @@ class Generator(nn.Module):
             activation="relu",
             normalization="BIN",
             seblock=False,
-            sn=False,
+            sn=sn,
         )
+
+        self.sa_layer = None
+        if self_attention is True:
+            self.sa_layer = SelfAttention2d(in_channels=32, sn=sn)
 
         self.up_block7 = BlockUpsample2d(
             in_channels=16,
@@ -206,7 +211,7 @@ class Generator(nn.Module):
             activation="relu",
             normalization="BIN",
             seblock=False,
-            sn=False,
+            sn=sn,
         )
 
         self.last_conv = nn.Conv2d(
@@ -276,6 +281,9 @@ class Generator(nn.Module):
         # Dimention -> [B, 32, 64, 64]
         up = self.up_block6(up)
 
+        if self.sa_layer is not None:
+            up = self.sa_layer(up)
+
         # Dimention -> [B, 16, 128, 128]
         up = self.up_block7(up)
 
@@ -289,7 +297,7 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, self_attention=True, sn=True):
         super().__init__()
 
         # DOWN:
@@ -300,7 +308,7 @@ class Discriminator(nn.Module):
             normalization=None,
             downscale=False,
             seblock=False,
-            sn=True,
+            sn=sn,
         )
 
         self.dn_block2 = InvertedRes2d(
@@ -312,7 +320,7 @@ class Discriminator(nn.Module):
             normalization=None,
             downscale=True,
             seblock=False,
-            sn=True,
+            sn=sn,
         )
 
         self.dn_block3 = InvertedRes2d(
@@ -324,8 +332,12 @@ class Discriminator(nn.Module):
             normalization=None,
             downscale=True,
             seblock=False,
-            sn=True,
+            sn=sn,
         )
+
+        self.sa_layer = None
+        if self_attention is True:
+            self.sa_layer = SelfAttention2d(in_channels=64, sn=sn)
 
         self.dn_block4 = InvertedRes2d(
             in_channels=64,
@@ -336,7 +348,7 @@ class Discriminator(nn.Module):
             normalization=None,
             downscale=True,
             seblock=False,
-            sn=True,
+            sn=sn,
         )
 
         self.dn_block5 = InvertedRes2d(
@@ -348,7 +360,7 @@ class Discriminator(nn.Module):
             normalization=None,
             downscale=True,
             seblock=False,
-            sn=True,
+            sn=sn,
         )
 
         self.dn_block6 = InvertedRes2d(
@@ -360,7 +372,7 @@ class Discriminator(nn.Module):
             normalization=None,
             downscale=True,
             seblock=False,
-            sn=True,
+            sn=sn,
         )
 
         self.dn_block7 = InvertedRes2d(
@@ -372,7 +384,7 @@ class Discriminator(nn.Module):
             normalization=None,
             downscale=True,
             seblock=False,
-            sn=True,
+            sn=sn,
         )
 
         self.global_avg_pool = nn.AdaptiveAvgPool2d([1, 1])
@@ -402,6 +414,9 @@ class Discriminator(nn.Module):
 
         # Dimention -> [B, 64, 32, 256]
         dn = self.dn_block3(dn)
+
+        if self.sa_layer is not None:
+            dn = self.sa_layer(dn)
 
         # Dimention -> [B, 128, 16, 128]
         dn = self.dn_block4(dn)

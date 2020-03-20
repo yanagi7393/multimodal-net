@@ -16,6 +16,14 @@ NORMS = {
 }
 
 
+def perform_sn(module, sn=False):
+    if sn is False:
+        return module
+
+    if sn is True:
+        return nn.utils.spectral_norm(module)
+
+
 class _BatchInstanceNorm2d(_BatchNorm):
     def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=True):
         super().__init__(num_features, eps, momentum, affine)

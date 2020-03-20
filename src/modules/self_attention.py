@@ -1,12 +1,26 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from .norms import perform_sn
 
 
 class SelfAttention2d(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self, in_channels, sn=False):
         super().__init__()
         self.f = nn.Sequential(
+            perform_sn(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=in_channels // 8,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                ),
+                sn=sn,
+            ),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+        self.g = perform_sn(
             nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=in_channels // 8,
@@ -14,32 +28,31 @@ class SelfAttention2d(nn.Module):
                 stride=1,
                 padding=0,
             ),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-        )
-        self.g = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=in_channels // 8,
-            kernel_size=1,
-            stride=1,
-            padding=0,
+            sn=sn,
         )
         self.h = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=in_channels // 2,
-                kernel_size=1,
-                stride=1,
-                padding=0,
+            perform_sn(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=in_channels // 2,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                ),
+                sn=sn,
             ),
             nn.MaxPool2d(kernel_size=2, stride=2),
         )
 
-        self.attn_conv = nn.Conv2d(
-            in_channels=in_channels // 2,
-            out_channels=in_channels,
-            kernel_size=1,
-            stride=1,
-            padding=0,
+        self.attn_conv = perform_sn(
+            nn.Conv2d(
+                in_channels=in_channels // 2,
+                out_channels=in_channels,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+            ),
+            sn=sn,
         )
 
         self.softmax = nn.Softmax(dim=-1)

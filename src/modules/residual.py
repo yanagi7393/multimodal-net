@@ -1,17 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .norms import NORMS
+from .norms import NORMS, perform_sn
 from .seblock import SEBlock
 from .upsample import Upsample
-
-
-def perform_sn(module, sn=False):
-    if sn is False:
-        return module
-
-    if sn is True:
-        return nn.utils.spectral_norm(module)
 
 
 class FirstBlockDown2d(nn.Module):
@@ -99,7 +91,9 @@ class FirstBlockDown2d(nn.Module):
 
         self.seblock = None
         if seblock is True:
-            self.seblock = SEBlock(in_channels=out_channels, activation=activation)
+            self.seblock = SEBlock(
+                in_channels=out_channels, activation=activation, sn=sn
+            )
 
         if downscale is True:
             if in_channels == out_channels:
@@ -238,7 +232,9 @@ class BlockDown2d(nn.Module):
 
         self.seblock = None
         if seblock is True:
-            self.seblock = SEBlock(in_channels=out_channels, activation=activation)
+            self.seblock = SEBlock(
+                in_channels=out_channels, activation=activation, sn=sn
+            )
 
         if downscale is True:
             if in_channels == out_channels:
@@ -418,7 +414,9 @@ class BlockUp2d(nn.Module):
 
         self.seblock = None
         if seblock is True:
-            self.seblock = SEBlock(in_channels=out_channels, activation=activation)
+            self.seblock = SEBlock(
+                in_channels=out_channels, activation=activation, sn=sn
+            )
 
         if upscale is True:
             self.deconv3 = perform_sn(
@@ -554,7 +552,9 @@ class BottleneckBlockDown2d(nn.Module):
 
         self.seblock = None
         if seblock is True:
-            self.seblock = SEBlock(in_channels=out_channels, activation=activation)
+            self.seblock = SEBlock(
+                in_channels=out_channels, activation=activation, sn=sn
+            )
 
         if downscale is True:
             if in_channels == out_channels:
@@ -754,7 +754,9 @@ class BottleneckBlockUp2d(nn.Module):
 
         self.seblock = None
         if seblock is True:
-            self.seblock = SEBlock(in_channels=out_channels, activation=activation)
+            self.seblock = SEBlock(
+                in_channels=out_channels, activation=activation, sn=sn
+            )
 
         if upscale is True:
             self.deconv4 = perform_sn(
