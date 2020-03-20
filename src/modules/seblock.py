@@ -6,7 +6,7 @@ import torch.nn.functional as F
 class SEBlock(nn.Module):
     def __init__(self, in_channels, reduction=16, activation="relu"):
         super(SEBlock, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.avg_pool = nn.AdaptiveAvgPool2d([1, 1])
         self.fc = nn.Sequential(
             nn.Conv2d(in_channels, in_channels // reduction, 1, bias=False),
             getattr(F, activation),

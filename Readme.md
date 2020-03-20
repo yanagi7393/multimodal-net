@@ -4,17 +4,19 @@
   - [x] use spatial dropout
   - [-] implement U-net++ structure　----------(PURGED)
   - [x] implement resnet block
-  - [x] implement inverted residual block 
+  - [x] implement inverted residual block
   - [x] implement self-attention
   - [x] implement squeeze exitation block
-  - [ ] implement handling spectal normalization
+  - [x] implement handling spectal normalization
   - [x] implement Multi method normalization
-  - [ ] implement Batch-Instance normalization
+  - [x] implement Batch-Instance normalization
   - [-] implement Cycle-GAN structure  ----------(NOT YET, NOW PURGED)
-  - [ ] implement GAN structure
+  - [ ] implement GAN structure (main model)
 2. Preprocessing
-  - [x] SOUND: implement STFT handling
-  - [ ] IMAGE: implement image augumentation method 
+  - [x] SOUND:
+    - [x] STFT handling
+    - [x] Normalizer
+  - [ ] IMAGE: implement image Normalizer
 3. DATASET
   - [x] video splitter
       - 1. extract frames, sound from video.
@@ -22,14 +24,14 @@
   - [x] sound and frame custom data loader for build datasets
   - [x] multiple audio files handle on stft
 4. Training
-  - [_] LATER
+  - [ ] LATER
 5. Testing
-  - [_] LATER
+  - [ ] LATER
 6. APPLY MULTI GPUs
-  - [_] LATER
+  - [ ] LATER
 7. make package
   - [ ] Define command use fire library
-  - [ ] Define & Build docker image
+  - [x] Define & Build docker image
 ```
 
 ## Project2: Sound <-> Image Cycle 

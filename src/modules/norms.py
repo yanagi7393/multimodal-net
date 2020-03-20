@@ -12,16 +12,20 @@ NORMS = {
     "IN": lambda num_channels: nn.GroupNorm(
         num_groups=num_channels, num_channels=num_channels
     ),
-    "BIN": lambda num_channels: _BatchInstanceNorm(num_features=num_channels),
+    "BIN": lambda num_channels: _BatchInstanceNorm2d(num_features=num_channels),
 }
 
 
-class _BatchInstanceNorm(_BatchNorm):
+class _BatchInstanceNorm2d(_BatchNorm):
     def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=True):
-        super(_BatchInstanceNorm, self).__init__(num_features, eps, momentum, affine)
+        super().__init__(num_features, eps, momentum, affine)
         self.gate = Parameter(torch.Tensor(num_features))
         self.gate.data.fill_(1)
         setattr(self.gate, "bin_gate", True)
+
+    def _check_input_dim(self, input):
+        if input.dim() != 4:
+            raise ValueError("expected 4D input (got {}D input)".format(input.dim()))
 
     def forward(self, input):
         self._check_input_dim(input)

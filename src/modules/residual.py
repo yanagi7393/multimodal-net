@@ -6,6 +6,14 @@ from .seblock import SEBlock
 from .upsample import Upsample
 
 
+def perform_sn(module, sn=False):
+    if sn is False:
+        return module
+
+    if sn is True:
+        return nn.utils.spectral_norm(module)
+
+
 class FirstBlockDown2d(nn.Module):
     """
     This is for first block with skip connection, without pre-activation structure.

@@ -1,7 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from ml.torch.modules.norms import NORMS
-from ml.torch.modules.seblock import SEBlock
+from .norms import NORMS
+from .seblock import SEBlock
+from .upsample import Upsample
 
 
 def perform_sn(module, sn=False):
@@ -189,6 +190,7 @@ class InvertedResUpsample2d(nn.Module):
         activation="relu",
         normalization="bn",
         seblock=False,
+        sn=False,
     ):
         super().__init__()
 
@@ -204,6 +206,7 @@ class InvertedResUpsample2d(nn.Module):
             normalization=normalization,
             downscale=False,
             seblock=seblock,
+            sn=sn,
         )
 
         def forward(self, x):
