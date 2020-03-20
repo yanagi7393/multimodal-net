@@ -2,7 +2,7 @@ import numpy as np
 from dataset_builder.stft import load_audio, transform_stft
 from dataset_builder.phase_helper import instantaneous_frequency
 from dataset_builder.spectrogram_helper import specgrams_to_melspecgrams
-from dataset_builder.modules.rawdata_loader import RawDataset
+from datasets.rawdataset import RawDataset
 from torch.utils.data import DataLoader
 from dataset_builder.utils import parallelize
 import os
@@ -11,7 +11,7 @@ DEFAULT_CONFIG = {
     "hop_length": 256,
     "win_length": 1024,
     "window": "hann",
-    "batch_size": 64,
+    "batch_size": 128,
     "shuffle": False
 }
 
