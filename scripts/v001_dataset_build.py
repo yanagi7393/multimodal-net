@@ -1,16 +1,16 @@
 import numpy as np
-from dataset_builder.stft import load_audio, transform_stft
-from dataset_builder.phase_helper import instantaneous_frequency
-from dataset_builder.spectrogram_helper import specgrams_to_melspecgrams
-from datasets.rawdataset import RawDataset
+from src.dataset_builder.stft import transform_stft
+from src.dataset_builder.phase_helper import instantaneous_frequency
+from src.dataset_builder.spectrogram_helper import specgrams_to_melspecgrams
+from src.datasets.rawdataset import RawDataset
 from torch.utils.data import DataLoader
-from dataset_builder.utils import parallelize
+from src.dataset_builder.utils import parallelize
 import os
-from datasets.dataset import FILENAME_TEMPLATE
+from src.datasets.dataset import FILENAME_TEMPLATE
 
 DEFAULT_CONFIG = {
-    "hop_length": 256,
-    "win_length": 1024,
+    "hop_length": 512,
+    "win_length": 2048,
     "window": "hann",
     "batch_size": 128,
     "shuffle": False
@@ -49,13 +49,14 @@ def video_to_datasets(video_path_list, save_dir="./dataset", device="cpu"):
         )
 
         # None handle
-        magnitude_list = [magnitude for magnitude in magnitude_list if magnitude is not None]
-        phase_list = [phase for phase in phase_list if phase is not None]
+        import pdb; pdb.set_trace()
+        magnitude_list = [np.squeeze(magnitude)[: DEFAULT_CONFIG["win_length"] // 2] for magnitude in magnitude_list if magnitude is not None]
+        phase_list = [np.squeeze(phase) for phase in phase_list if phase is not None]
 
-        log_magnitude_list = [np.log(magnitude + 1.0e-6)[: DEFAULT_CONFIG["window"]] for magnitude in magnitude_list]
+        log_magnitude_list = [np.log(magnitude + 1.0e-6) for magnitude in magnitude_list]
         log_magnitude_list = [expand(log_magnitude) for log_magnitude in log_magnitude_list]
 
-        IFs = [instantaneous_frequency(phase, time_axis=1)[: DEFAULT_CONFIG["window"]] for phase in phase_list]
+        IFs = [instantaneous_frequency(phase, time_axis=1)[: DEFAULT_CONFIG["win_length"] // 2] for phase in phase_list]
         IFs = [expand(IF) for IF in IFs]
 
         # check one value

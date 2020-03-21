@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from modules.inverted_residual import InvertedRes2d
-from modules.residual import FirstBlockDown2d, BlockUpsample2d
-from modules.self_attention import SelfAttention2d
+from src.modules.inverted_residual import InvertedRes2d
+from src.modules.residual import FirstBlockDown2d, BlockUpsample2d
+from src.modules.self_attention import SelfAttention2d
 
 
 class Generator(nn.Module):

@@ -16,6 +16,6 @@ def parallelize(func: Callable, params: List[Dict], n_jobs: int = 64) -> List:
 
 
 def load_audio(
-    path, offset=0.0, duration=None
+    path, offset=0.0, duration=None, sr=16000
 ):  # offset and duration is already handled on VideoSplitter side.
-    return librosa.load(path, offset=offset, duration=duration)[0]
+    return librosa.load(path, offset=offset, duration=duration, sr=sr)[0]

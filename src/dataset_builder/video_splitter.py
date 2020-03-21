@@ -4,6 +4,7 @@ from pathlib import Path
 from moviepy.editor import VideoFileClip
 from moviepy.video.fx.all import crop
 from .utils import parallelize
+import math
 
 
 class VideoSplitter:
@@ -14,7 +15,7 @@ class VideoSplitter:
         for _dir in [self.frames_dir, self.sounds_dir]:
             os.makedirs(_dir, exist_ok=True)
 
-    def split(self, video_path, offset=5, duration=10, n_frames=1, frame_size=256):
+    def split(self, video_path, offset=5, duration=4, n_frames=1, frame_size=256):
         video_name = Path(video_path).stem
 
         get_frame_path = lambda index: os.path.join(
@@ -30,7 +31,7 @@ class VideoSplitter:
             return
 
         end_time = offset + duration
-        end_time = min(end_time, video.duration)
+        end_time = min(end_time, math.floor(video.duration))
         start_time = end_time - duration
 
         video = video.subclip(start_time, end_time)
@@ -67,7 +68,7 @@ class VideoSplitter:
         self,
         video_path_list,
         offset=5,
-        duration=10,
+        duration=4,
         n_frames=1,
         frame_size=256,
         n_jobs=64,

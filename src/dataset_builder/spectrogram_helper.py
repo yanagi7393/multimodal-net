@@ -1,5 +1,5 @@
 import numpy as np
-from phase_helper import instantaneous_frequency
+from .phase_helper import instantaneous_frequency
 
 
 # mel spectrum constants.

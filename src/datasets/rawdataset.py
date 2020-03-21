@@ -1,8 +1,8 @@
 from torch.utils.data import Dataset
-from dataset_builder.video_splitter import VideoSplitter
+from src.dataset_builder.video_splitter import VideoSplitter
 import tempfile
 from PIL import Image
-from dataset_builder.utils import load_audio
+from src.dataset_builder.utils import load_audio
 import torchvision
 from typing import Dict, List
 import numpy as np

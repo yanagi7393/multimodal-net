@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .utils import calc_gp, weights_init, save_model, load_model
-from datasets.dataset import Dataset
+from src.datasets.dataset import Dataset
 from preprocessor import (
     MelNormalizer,
     MelDeNormalizer,
@@ -9,7 +9,7 @@ from preprocessor import (
     FrameDeNormalizer,
 )
 from torch.utils.data import DataLoader
-from modules.sound2image import Generator, Discriminator
+from src.modules.sound2image import Generator, Discriminator
 from copy import copy
 
 

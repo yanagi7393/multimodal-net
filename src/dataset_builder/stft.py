@@ -3,13 +3,12 @@ from torch_stft import STFT
 import numpy as np
 import librosa
 import matplotlib.pyplot as plt
-from .utils import load_audio
 
 
 def transform_stft(
     audio_list,
-    hop_length=256,
-    win_length=1024,
+    hop_length=512,
+    win_length=2048,
     window="hann",
     device="cpu",
     input_tensor=False,
@@ -33,8 +32,8 @@ def transform_stft(
     ).to(device)
 
     magnitudes, phases = stft.transform(audio_cat)
-    magnitudes = torch.split(magnitudes, dim=0)
-    phases = torch.split(phases, dim=0)
+    magnitudes = torch.split(magnitudes, split_size_or_sections=1, dim=0)
+    phases = torch.split(phases, split_size_or_sections=1, dim=0)
 
     if output_tensor is True:
         return magnitudes, phases
@@ -48,8 +47,8 @@ def transform_stft(
 def inverse_stft(
     magnitude_list,
     phase_list,
-    hop_length=256,
-    win_length=1024,
+    hop_length=512,
+    win_length=2048,
     window="hann",
     device="cpu",
     input_tensor=False,
@@ -73,7 +72,9 @@ def inverse_stft(
     ).to(device)
 
     reconstructed_audio = stft.inverse(magnitude_cat, phase_cat)
-    reconstructed_audio = torch.split(reconstructed_audio, dim=0)
+    reconstructed_audio = torch.split(
+        reconstructed_audio, split_size_or_sections=1, dim=0
+    )
 
     if output_tensor is True:
         return reconstructed_audio
