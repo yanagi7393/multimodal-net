@@ -3,7 +3,7 @@ class FrameNormalizer(object):
         pass
 
     def __call__(self, image):
-        image = (image / 255.0) * 2.0 - 1.0
+        image = ((image / 255.0) - 0.5) * 2
 
         return image
 
@@ -13,6 +13,6 @@ class FrameDeNormalizer(object):
         pass
 
     def __call__(self, image):
-        image = ((image + 1) / 2) * 255.0
+        image = ((image / 2) + 0.5) * 255.0
 
         return image

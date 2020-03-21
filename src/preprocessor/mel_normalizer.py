@@ -4,7 +4,7 @@ import json
 import os
 
 
-class AudioNormalizer(object):
+class MelNormalizer(object):
     def __init__(self, dataloader, savefile_path="./normalizer.json"):
         self.dataloader = dataloader
         self.savefile_path = savefile_path
@@ -64,7 +64,7 @@ class AudioNormalizer(object):
         return spec, IF
 
 
-class AudioDeNormalizer(object):
+class MelDeNormalizer(object):
     def __init__(self, dataloader, savefile_path="./normalizer.json"):
         self.dataloader = dataloader
         self.savefile_path = savefile_path
@@ -97,7 +97,9 @@ class AudioDeNormalizer(object):
         min_IF = 10000
         max_IF = -10000
 
-        for batch_idx, (spec, IF) in enumerate(self.dataloader):
+        for batch_idx, data_dict in enumerate(self.dataloader):
+            spec = data_dict["log_mel_spec"]
+            IF = data_dict["mel_if"]
 
             if spec.min() < min_spec:
                 min_spec = spec.min()
