@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from src.dataset_builder.stft import transform_stft
 from src.dataset_builder.phase_helper import instantaneous_frequency
@@ -5,8 +6,8 @@ from src.dataset_builder.spectrogram_helper import specgrams_to_melspecgrams
 from src.datasets.rawdataset import RawDataset
 from torch.utils.data import DataLoader
 from src.dataset_builder.utils import parallelize
-import os
 from src.datasets.dataset import FILENAME_TEMPLATE
+from src.dataset_builder.video_splitter import VideoSplitter
 
 
 DEFAULT_CONFIG = {
@@ -34,7 +35,7 @@ def video_to_datasets(video_path_list, save_dir="./dataset", device="cpu"):
         os.makedirs(dir, exist_ok=True)
 
     raw_data = RawDataset(video_path_list=video_path_list, transforms={})
-    data_loader = DataLoader(dataset=raw_data, batch_size=DEFAULT_CONFIG['batch_size'], shuffle=DEFAULT_CONFIG["shuffle"], pin_memory=True, num_workers=0)
+    data_loader = DataLoader(dataset=raw_data, batch_size=DEFAULT_CONFIG['batch_size'], shuffle=DEFAULT_CONFIG["shuffle"], pin_memory=True, num_workers=DEFAULT_CONFIG['batch_size'] // 2)
 
     i = 0
     # Audio Part

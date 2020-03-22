@@ -18,22 +18,22 @@ class RawDataset(Dataset):
         return len(self.video_path_list)
 
     def __getitem__(self, idx):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            video_splitter = VideoSplitter(save_dir=temp_dir)
+        video_splitter = VideoSplitter()
 
-            paths = video_splitter.split(
-                video_path=self.video_path_list[idx], n_frames=1, **self.params
-            )
-            if paths is None:
-                return "NODATA", "NODATA"
+        data_dict = video_splitter.split(
+            video_path=self.video_path_list[idx], n_frames=1, **self.params
+        )
+        if data_dict is None:
+            return "NODATA", "NODATA"
 
-            image = np.array(Image.open(paths["frame_path"][-1]))
-            sound = load_audio(path=paths["sound_path"][-1])
+        # we use only last value
+        frame = data_dict["frames"][-1]
+        audio = data_dict["audios"][-1].mean(axis=-1).astype("float32")
 
         if self.transforms.get("frame"):
-            image = self.transforms.get("frame")(image)
+            frame = self.transforms.get("frame")(frame)
 
-        if self.transforms.get("sound"):
-            sound = self.transforms.get("sound")(sound)
+        if self.transforms.get("audio"):
+            audio = self.transforms.get("audio")(audio)
 
-        return image, sound
+        return frame, audio

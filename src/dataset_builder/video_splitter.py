@@ -4,6 +4,7 @@ from pathlib import Path
 from moviepy.editor import VideoFileClip
 from moviepy.video.fx.all import crop
 from .utils import parallelize
+from src.dataset_builder.utils import load_audio
 import math
 
 DEFUALT = {
@@ -12,17 +13,11 @@ DEFUALT = {
     "n_frames": 1,
     "frame_size": 256,
     "n_jobs": 64,
+    "sr": 16000,
 }
 
 
 class VideoSplitter:
-    def __init__(self, save_dir):
-        self.frames_dir = os.path.join(save_dir, "frames")
-        self.sounds_dir = os.path.join(save_dir, "sounds")
-
-        for _dir in [self.frames_dir, self.sounds_dir]:
-            os.makedirs(_dir, exist_ok=True)
-
     def split(
         self,
         video_path,
@@ -31,12 +26,10 @@ class VideoSplitter:
         n_frames=DEFUALT["n_frames"],
         frame_size=DEFUALT["frame_size"],
     ):
-        video_name = Path(video_path).stem
+        if not os.path.isfile(video_path):
+            raise ValueError(f"FileNotExisted:{video_path}")
 
-        get_frame_path = lambda index: os.path.join(
-            self.frames_dir, video_name + f"-{index}.png"
-        )
-        sound_path = os.path.join(self.frames_dir, video_name + ".mp3")
+        video_name = Path(video_path).stem
 
         # load video
         video = VideoFileClip(video_path)
@@ -62,29 +55,28 @@ class VideoSplitter:
         # frame part
         time_ranges = range(0, duration)
         pick_frame_times = random.sample(time_ranges, n_frames)
+
+        frames = []
         for idx, t in enumerate(pick_frame_times):
             try:
-                video.save_frame(get_frame_path(index=idx), t)
+                frame = video.get_frame(t)
+                frames.append(frame)
                 continue
-            except OSError:
+            except:
                 try:
-                    video.save_frame(get_frame_path(index=idx), time_ranges[-1])
+                    frame = video.get_frame(time_ranges[-1])
+                    frames.append(frame)
                 except:
                     return None
 
         # audio part
-        audio = video.audio
-
-        # Replace the parameter with the location along with filename
-        audio.write_audiofile(sound_path)
+        audios = [video.audio.to_soundarray(fps=DEFUALT["sr"])]
 
         video.close()
 
         return {
-            "frame_path": [
-                get_frame_path(index=idx) for idx in range(len(pick_frame_times))
-            ],
-            "sound_path": [sound_path],
+            "frames": frames,
+            "audios": audios,
         }
 
     def splits(
@@ -105,8 +97,8 @@ class VideoSplitter:
                 "duration": duration,
                 "n_frames": n_frames,
                 "frame_size": frame_size,
-                "n_jobs": n_jobs,
             }
             params.append(param)
 
-        parallelize(func=self.split, params=params, n_jobs=n_jobs)
+        outputs = parallelize(func=self.split, params=params, n_jobs=n_jobs)
+        return outputs
