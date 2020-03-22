@@ -145,7 +145,7 @@ class Generator(nn.Module):
             out_channels=512,
             dropout=0.5,
             activation="relu",
-            normalization="BIN",
+            normalization="GN",
             seblock=False,
             sn=sn,
         )
@@ -155,7 +155,7 @@ class Generator(nn.Module):
             out_channels=256,
             dropout=0.5,
             activation="relu",
-            normalization="BIN",
+            normalization="GN",
             seblock=False,
             sn=sn,
         )
@@ -165,7 +165,7 @@ class Generator(nn.Module):
             out_channels=256,
             dropout=0.5,
             activation="relu",
-            normalization="BIN",
+            normalization="GN",
             seblock=False,
             sn=sn,
         )
@@ -175,7 +175,7 @@ class Generator(nn.Module):
             out_channels=128,
             dropout=0.5,
             activation="relu",
-            normalization="BIN",
+            normalization="GN",
             seblock=False,
             sn=sn,
         )
@@ -185,7 +185,7 @@ class Generator(nn.Module):
             out_channels=64,
             dropout=0.5,
             activation="relu",
-            normalization="BIN",
+            normalization="GN",
             seblock=False,
             sn=sn,
         )
@@ -195,7 +195,7 @@ class Generator(nn.Module):
             out_channels=32,
             dropout=0.5,
             activation="relu",
-            normalization="BIN",
+            normalization="GN",
             seblock=False,
             sn=sn,
         )
@@ -209,7 +209,7 @@ class Generator(nn.Module):
             out_channels=16,
             dropout=0.5,
             activation="relu",
-            normalization="BIN",
+            normalization="GN",
             seblock=False,
             sn=sn,
         )

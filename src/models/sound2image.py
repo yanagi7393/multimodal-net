@@ -8,6 +8,7 @@ from preprocessor import (
     FrameNormalizer,
     FrameDeNormalizer,
 )
+import torchvision
 from torch.utils.data import DataLoader
 from src.modules.sound2image import Generator, Discriminator
 from copy import copy
@@ -45,12 +46,18 @@ def train(data_dir, batch_size, exp_dir="./experiments", device="cuda"):
             data_dir=data_dir, transforms={}, load_files=["log_mel_spec", "mel_if"]
         )
         mel_data_loader = DataLoader(
-            dataset=mel_dataset, batch_size=batch_size, shuffle=False
+            dataset=mel_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            pin_memory=True,
+            num_workers=batch_size // 2,
         )
 
     # Data definitions
     transforms = {
-        "frame": FrameNormalizer(),
+        "frame": torchvision.transforms.Compose(
+            [FrameNormalizer(), torchvision.transforms.RandomVerticalFlip(p=0.5)]
+        ),
         "mel": MelNormalizer(
             dataloader=mel_data_loader,
             savefile_path=data_config["mel_normalizer_savefile"],
@@ -60,7 +67,13 @@ def train(data_dir, batch_size, exp_dir="./experiments", device="cuda"):
     dataset = Dataset(
         data_dir=data_dir, transforms=transforms, load_files=data_config["load_files"]
     )
-    data_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
+    data_loader = DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        pin_memory=True,
+        num_workers=batch_size // 2,
+    )
 
     # model definition
     netG = Generator().to(device)

@@ -6,6 +6,14 @@ from moviepy.video.fx.all import crop
 from .utils import parallelize
 import math
 
+DEFUALT = {
+    "offset": 10,
+    "duration": 4,
+    "n_frames": 1,
+    "frame_size": 256,
+    "n_jobs": 64,
+}
+
 
 class VideoSplitter:
     def __init__(self, save_dir):
@@ -15,7 +23,14 @@ class VideoSplitter:
         for _dir in [self.frames_dir, self.sounds_dir]:
             os.makedirs(_dir, exist_ok=True)
 
-    def split(self, video_path, offset=5, duration=4, n_frames=1, frame_size=256):
+    def split(
+        self,
+        video_path,
+        offset=DEFUALT["offset"],
+        duration=DEFUALT["duration"],
+        n_frames=DEFUALT["n_frames"],
+        frame_size=DEFUALT["frame_size"],
+    ):
         video_name = Path(video_path).stem
 
         get_frame_path = lambda index: os.path.join(
@@ -28,7 +43,7 @@ class VideoSplitter:
 
         # if whole duration size is smaller than duration, just pass.
         if video.duration < duration:
-            return
+            return None
 
         end_time = offset + duration
         end_time = min(end_time, math.floor(video.duration))
@@ -45,9 +60,17 @@ class VideoSplitter:
         ).resize(width=frame_size, height=frame_size)
 
         # frame part
-        pick_frame_times = random.sample(range(start_time, end_time), n_frames)
+        time_ranges = range(0, duration)
+        pick_frame_times = random.sample(time_ranges, n_frames)
         for idx, t in enumerate(pick_frame_times):
-            video.save_frame(get_frame_path(index=idx), t)
+            try:
+                video.save_frame(get_frame_path(index=idx), t)
+                continue
+            except OSError:
+                try:
+                    video.save_frame(get_frame_path(index=idx), time_ranges[-1])
+                except:
+                    return None
 
         # audio part
         audio = video.audio
@@ -67,11 +90,11 @@ class VideoSplitter:
     def splits(
         self,
         video_path_list,
-        offset=5,
-        duration=4,
-        n_frames=1,
-        frame_size=256,
-        n_jobs=64,
+        offset=DEFUALT["offset"],
+        duration=DEFUALT["duration"],
+        n_frames=DEFUALT["n_frames"],
+        frame_size=DEFUALT["frame_size"],
+        n_jobs=DEFUALT["n_jobs"],
     ):
         params = []
 

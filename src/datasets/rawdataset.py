@@ -25,7 +25,7 @@ class RawDataset(Dataset):
                 video_path=self.video_path_list[idx], n_frames=1, **self.params
             )
             if paths is None:
-                return None, None
+                return "NODATA", "NODATA"
 
             image = np.array(Image.open(paths["frame_path"][-1]))
             sound = load_audio(path=paths["sound_path"][-1])
