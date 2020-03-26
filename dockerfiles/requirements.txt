@@ -10,3 +10,5 @@ moviepy
 torch_stft
 intervaltree
 pillow
+libsndfile1
+matplotlib

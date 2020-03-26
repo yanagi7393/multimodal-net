@@ -4,7 +4,7 @@ from pathlib import Path
 from moviepy.editor import VideoFileClip
 from moviepy.video.fx.all import crop
 from .utils import parallelize
-from src.dataset_builder.utils import load_audio
+from dataset_builder.utils import load_audio
 import math
 
 DEFUALT = {
@@ -14,6 +14,7 @@ DEFUALT = {
     "frame_size": 256,
     "n_jobs": 64,
     "sr": 16000,
+    "mutate_end_time": True,
 }
 
 
@@ -25,6 +26,7 @@ class VideoSplitter:
         duration=DEFUALT["duration"],
         n_frames=DEFUALT["n_frames"],
         frame_size=DEFUALT["frame_size"],
+        mutate_end_time=DEFUALT["mutate_end_time"],
     ):
         if not os.path.isfile(video_path):
             raise ValueError(f"FileNotExisted:{video_path}")
@@ -39,6 +41,11 @@ class VideoSplitter:
             return None
 
         end_time = offset + duration
+
+        if mutate_end_time is False:
+            if end_time > math.floor(video.duration):
+                return None
+
         end_time = min(end_time, math.floor(video.duration))
         start_time = end_time - duration
 

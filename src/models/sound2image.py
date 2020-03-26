@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .utils import calc_gp, weights_init, save_model, load_model
-from src.datasets.dataset import Dataset
+from datasets.dataset import Dataset
 from preprocessor import (
     MelNormalizer,
     MelDeNormalizer,
@@ -10,15 +10,16 @@ from preprocessor import (
 )
 import torchvision
 from torch.utils.data import DataLoader
-from src.modules.sound2image import Generator, Discriminator
+from modules.sound2image import Generator, Discriminator
 from copy import copy
 
 
 DATA_CONFIG = {
     "load_files": ["frame", "log_mel_spec", "mel_if"],
-    "mel_normalizer_savefile": "normalizer.json",
-    "D_checkpoint_dir": "check_points/Discriminator",
-    "G_checkpoint_dir": "check_points/Generator",
+    "mel_normalizer_savefile": "./normalizer/mel_normalizer.json",
+    "D_checkpoint_dir": "./check_points/Discriminator",
+    "G_checkpoint_dir": "./check_points/Generator",
+    "test_output_dir": "./test_outputs",
 }
 
 MODEL_CONFIG = {
@@ -31,13 +32,18 @@ MODEL_CONFIG = {
 }
 
 
-def train(data_dir, batch_size, exp_dir="./experiments", device="cuda"):
+def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="cuda"):
     # refine path with exp_dir
     data_config = copy(DATA_CONFIG)
 
-    os.makedirs(exp_dir, exist_ok=True)
-    for key in ["mel_normalizer_savefile", "D_checkpoint_dir", "G_checkpoint_dir"]:
+    for key in [
+        "mel_normalizer_savefile",
+        "D_checkpoint_dir",
+        "G_checkpoint_dir",
+        "test_output_dir",
+    ]:
         data_config[key] = os.path.join(exp_dir, data_config[key])
+        os.makedirs(data_config[key], exist_ok=True)
 
     # for normalizer of mel
     mel_data_loader = None
@@ -64,11 +70,26 @@ def train(data_dir, batch_size, exp_dir="./experiments", device="cuda"):
         ),
     }
 
+    # Define train_data loader
     dataset = Dataset(
         data_dir=data_dir, transforms=transforms, load_files=data_config["load_files"]
     )
     data_loader = DataLoader(
         dataset=dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        pin_memory=True,
+        num_workers=batch_size // 2,
+    )
+
+    # Define train_data loader
+    test_dataset = Dataset(
+        data_dir=test_data_dir,
+        transforms=transforms,
+        load_files=data_config["load_files"],
+    )
+    test_data_loader = DataLoader(
+        dataset=test_dataset,
         batch_size=batch_size,
         shuffle=True,
         pin_memory=True,
@@ -159,8 +180,34 @@ def train(data_dir, batch_size, exp_dir="./experiments", device="cuda"):
                     f"INFO: D_loss: {d_loss.item():4f} | G_loss: {g_loss.item():4f} | W_D: {wasserstein_D.item():4f}"
                 )
 
-                if idx % MODEL_CONFIG["test_epoch"] == 0:
-                    ...
+            if idx % MODEL_CONFIG["test_epoch"] == 0:
+                test_data_dict = next(test_data_loader)
+                test_data_dict = dict(
+                    [
+                        (key, value.to(device))
+                        if key in ["log_mel_spec", "mel_if"]
+                        else (key, value.to("cpu"))
+                        for key, value in test_data_dict.items()
+                    ]
+                )
+
+                mel_test_data = torch.cat(
+                    [test_data_dict["log_mel_spec"], test_data_dict["mel_if"]], dim=1
+                )
+
+                with torch.no_grad():
+                    gen_frames = netG(mel_test_data).detach()
+
+                concat_frames = torch.cat(
+                    [gen_frames.cpu(), test_data_dict["frame"]], dim=0
+                )
+                concat_frames = torchvision.utils.make_grid(
+                    concat_frames, nrow=2, padding=10
+                )
+
+                torchvision.utils.save_image(
+                    concat_frames, os.path.join(data_config[key], f"{iter_}-{idx}.jpg")
+                )
 
         save_model(model=netG, dir=data_config["G_checkpoint_dir"], iter=iter_)
         save_model(model=netD, dir=data_config["D_checkpoint_dir"], iter=iter_)
