@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 from typing import Dict, List, Callable
 from glob import glob
 import os
+import numpy as np
 
 
 FILENAME_TEMPLATE = {

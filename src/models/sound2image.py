@@ -12,11 +12,13 @@ import torchvision
 from torch.utils.data import DataLoader
 from modules.sound2image import Generator, Discriminator
 from copy import copy
+import os
 
 
 DATA_CONFIG = {
     "load_files": ["frame", "log_mel_spec", "mel_if"],
     "mel_normalizer_savefile": "./normalizer/mel_normalizer.json",
+    "normalizer_dir": "./normalizer",
     "D_checkpoint_dir": "./check_points/Discriminator",
     "G_checkpoint_dir": "./check_points/Generator",
     "test_output_dir": "./test_outputs",
@@ -38,12 +40,15 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
 
     for key in [
         "mel_normalizer_savefile",
+        "normalizer_dir",
         "D_checkpoint_dir",
         "G_checkpoint_dir",
         "test_output_dir",
     ]:
         data_config[key] = os.path.join(exp_dir, data_config[key])
-        os.makedirs(data_config[key], exist_ok=True)
+
+        if "_dir" in key:
+            os.makedirs(data_config[key], exist_ok=True)
 
     # for normalizer of mel
     mel_data_loader = None
@@ -95,6 +100,7 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
         pin_memory=True,
         num_workers=batch_size // 2,
     )
+    test_data_loader = iter(test_data_loader)
 
     # model definition
     netG = Generator().to(device)
@@ -137,6 +143,10 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
             mel_data = torch.cat(
                 [data_dict["log_mel_spec"], data_dict["mel_if"]], dim=1
             )
+
+            # TRAIN MODE
+            netD.train()
+            netG.train()
 
             ############
             # Update D #
@@ -181,6 +191,10 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
                 )
 
             if idx % MODEL_CONFIG["test_epoch"] == 0:
+                # EVAL MODE
+                netD.eval()
+                netG.eval()
+
                 test_data_dict = next(test_data_loader)
                 test_data_dict = dict(
                     [
@@ -206,7 +220,8 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
                 )
 
                 torchvision.utils.save_image(
-                    concat_frames, os.path.join(data_config[key], f"{iter_}-{idx}.jpg")
+                    concat_frames,
+                    os.path.join(data_config["test_output_dir"], f"{iter_}-{idx}.png"),
                 )
 
         save_model(model=netG, dir=data_config["G_checkpoint_dir"], iter=iter_)

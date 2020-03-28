@@ -6,6 +6,7 @@ from dataset_builder.utils import load_audio
 import torchvision
 from typing import Dict, List
 import numpy as np
+from torch.utils.data.dataloader import default_collate
 
 
 class RawDataset(Dataset):
@@ -24,7 +25,7 @@ class RawDataset(Dataset):
             video_path=self.video_path_list[idx], n_frames=1, **self.params
         )
         if data_dict is None:
-            return "NODATA", "NODATA"
+            return None
 
         # we use only last value
         frame = data_dict["frames"][-1]
@@ -37,3 +38,12 @@ class RawDataset(Dataset):
             audio = self.transforms.get("audio")(audio)
 
         return frame, audio
+
+
+def custom_collate_fn(batch):
+    "Puts each data field into a tensor with outer dimension batch size"
+    batch = [item for item in batch if item is not None]
+    if len(batch) == 0:
+        return (None, None)
+
+    return default_collate(batch)

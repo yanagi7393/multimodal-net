@@ -37,7 +37,9 @@ class MelNormalizer(object):
         min_IF = 10000
         max_IF = -10000
 
-        for batch_idx, (spec, IF) in enumerate(self.dataloader):
+        for batch_idx, data_dict in enumerate(self.dataloader):
+            spec = data_dict["log_mel_spec"]
+            IF = data_dict["mel_if"]
 
             if spec.min() < min_spec:
                 min_spec = spec.min()
@@ -49,11 +51,13 @@ class MelNormalizer(object):
             if IF.max() > max_IF:
                 max_IF = IF.max()
 
-        self.s_a = magnitude_margin * (2.0 / (max_spec - min_spec))
-        self.s_b = magnitude_margin * (-2.0 * min_spec / (max_spec - min_spec) - 1.0)
+        self.s_a = (magnitude_margin * (2.0 / (max_spec - min_spec))).item()
+        self.s_b = (
+            magnitude_margin * (-2.0 * min_spec / (max_spec - min_spec) - 1.0)
+        ).item()
 
-        self.p_a = IF_margin * (2.0 / (max_IF - min_IF))
-        self.p_b = IF_margin * (-2.0 * min_IF / (max_IF - min_IF) - 1.0)
+        self.p_a = (IF_margin * (2.0 / (max_IF - min_IF))).item()
+        self.p_b = (IF_margin * (-2.0 * min_IF / (max_IF - min_IF) - 1.0)).item()
 
         self._save_params()
 
@@ -111,11 +115,13 @@ class MelDeNormalizer(object):
             if IF.max() > max_IF:
                 max_IF = IF.max()
 
-        self.s_a = magnitude_margin * (2.0 / (max_spec - min_spec))
-        self.s_b = magnitude_margin * (-2.0 * min_spec / (max_spec - min_spec) - 1.0)
+        self.s_a = (magnitude_margin * (2.0 / (max_spec - min_spec))).item()
+        self.s_b = (
+            magnitude_margin * (-2.0 * min_spec / (max_spec - min_spec) - 1.0)
+        ).item()
 
-        self.p_a = IF_margin * (2.0 / (max_IF - min_IF))
-        self.p_b = IF_margin * (-2.0 * min_IF / (max_IF - min_IF) - 1.0)
+        self.p_a = (IF_margin * (2.0 / (max_IF - min_IF))).item()
+        self.p_b = (IF_margin * (-2.0 * min_IF / (max_IF - min_IF) - 1.0)).item()
 
         self._save_params()
 

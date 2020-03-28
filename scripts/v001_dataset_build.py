@@ -3,7 +3,7 @@ import numpy as np
 from dataset_builder.stft import transform_stft
 from dataset_builder.phase_helper import instantaneous_frequency
 from dataset_builder.spectrogram_helper import specgrams_to_melspecgrams
-from datasets.rawdataset import RawDataset
+from datasets.rawdataset import RawDataset, custom_collate_fn
 from torch.utils.data import DataLoader
 from dataset_builder.utils import parallelize
 from datasets.dataset import FILENAME_TEMPLATE
@@ -81,13 +81,12 @@ def video_to_datasets(video_path_list, offsets=[10], save_dir="./dataset", devic
             batch_size=DEFAULT_CONFIG["batch_size"],
             shuffle=DEFAULT_CONFIG["shuffle"],
             num_workers=DEFAULT_CONFIG["batch_size"] // 2,
+            collate_fn=custom_collate_fn,
         )
 
         # Audio Part
         for frame_list, audio_list in data_loader:
-            frame_list = [frame for frame in frame_list if isinstance(frame, str) is not True]
-            audio_list = [audio for audio in audio_list if isinstance(audio, str) is not True]
-            if len(frame_list) == 0 or len(audio_list) == 0:
+            if frame_list is None or audio_list is None:
                 continue
 
             magnitude_list, phase_list = transform_stft(
