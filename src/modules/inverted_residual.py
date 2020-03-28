@@ -30,7 +30,7 @@ class InvertedRes2d(nn.Module):
         sn=False,
     ):
         super().__init__()
-        if planes <= in_channels:
+        if planes < in_channels:
             raise ValueError(
                 f"planes({planes}) should be lager than in_channels({in_channels})"
             )

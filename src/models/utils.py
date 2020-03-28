@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import os
 from glob import glob
+from modules.norms import _BatchInstanceNorm2d
 
 
 def save_model(model, dir, iter):
@@ -18,6 +19,11 @@ def load_model(model, dir):
 
     check_points = glob(os.path.join(dir, "checkpoint-*"))
     check_points = sorted(check_points, key=lambda x: int(x.replace("checkpoint-", "")))
+
+    if len(check_points) == 0:
+        print("[!] Load is failed")
+        return -1
+
     check_point = check_points[-1]
 
     model.load_state_dict(torch.load(check_point))
@@ -27,18 +33,11 @@ def load_model(model, dir):
 
 
 def weights_init(m):
-    classname = m.__class__.__name__
-
-    if any(
-        [
-            classname.find(type) != -1
-            for type in ["Conv", "Res", "Block", "SelfAttention", "Norm"]
-        ]
-    ):
+    if isinstance(m, (nn.Conv2d, nn.BatchNorm2d, nn.GroupNorm, _BatchInstanceNorm2d)):
         nn.init.normal_(m.weight.data, 0.0, 0.02)
-
-        if m.bias is not None:
-            nn.init.constant_(m.bias.data, 0)
+        if hasattr(m, bias):
+            if m.bias is not None:
+                nn.init.constant_(m.bias.data, 0)
 
 
 def calc_gp(discriminator, real_images, fake_images, lambda_term=10, device="cpu"):

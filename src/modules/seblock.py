@@ -4,6 +4,13 @@ import torch.nn.functional as F
 from .norms import perform_sn
 
 
+get_activation_func = {
+    "relu": nn.ReLU,
+    "prelu": nn.PReLU,
+    "leaky_relu": nn.LeakyReLU,
+}
+
+
 class SEBlock(nn.Module):
     def __init__(self, in_channels, reduction=16, activation="relu", sn=False):
         super(SEBlock, self).__init__()
@@ -12,7 +19,7 @@ class SEBlock(nn.Module):
             perform_sn(
                 nn.Conv2d(in_channels, in_channels // reduction, 1, bias=False), sn=sn
             ),
-            getattr(F, activation),
+            get_activation_func[activation](),
             perform_sn(
                 nn.Conv2d(in_channels // reduction, in_channels, 1, bias=False), sn=sn
             ),

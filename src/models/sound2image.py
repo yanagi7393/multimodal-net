@@ -114,7 +114,7 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
         raise ValueError(f"g_last_iter: {g_last_iter} != d_last_iter: {d_last_iter}")
 
     # parallelize of model
-    if device.type == "cuda":
+    if "cuda" in device:
         netG = nn.DataParallel(netG)
         netD = nn.DataParallel(netD)
 
