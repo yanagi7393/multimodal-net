@@ -45,7 +45,9 @@ def load_model(model, dir, load_iter=None):
 
 
 def weights_init(m):
-    if isinstance(m, (nn.Conv2d, nn.BatchNorm2d, nn.GroupNorm, _BatchInstanceNorm2d)):
+    if isinstance(
+        m, (nn.Conv2d, nn.Linear, nn.BatchNorm2d, nn.GroupNorm, _BatchInstanceNorm2d)
+    ):
         nn.init.normal_(m.weight.data, 0.0, 0.02)
         if hasattr(m, "bias"):
             if m.bias is not None:
