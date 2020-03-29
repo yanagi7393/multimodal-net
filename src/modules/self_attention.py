@@ -59,18 +59,18 @@ class SelfAttention2d(nn.Module):
         self.gamma = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
-        b, ch, h, w = x.size()
+        b, ch, w, h = x.size()
 
         s = torch.bmm(
-            self.f(x).view(-1, ch // 8, h * w // 4).permute(0, 2, 1),
-            self.g(x).view(-1, ch // 8, h * w),
+            self.f(x).view(-1, ch // 8, w * h // 4).permute(0, 2, 1),
+            self.g(x).view(-1, ch // 8, w * h),
         )  # bmm(B X N X CH//8, B X CH//8 X N) -> B x N//4 x N
         beta = self.softmax(s)
 
         o = torch.bmm(
-            self.h(x).view(-1, ch // 2, h * w // 4), beta
+            self.h(x).view(-1, ch // 2, w * h // 4), beta
         )  # bmm(B x C//2 x N//4,  B x N//4 x N) -> B x C//2 x N
-        o = self.attn_conv(o)  # B x C x N
+        o = self.attn_conv(o.view(b, ch // 2, w, h))  # -> B x C x N
         x = self.gamma * o + x
 
         return x
