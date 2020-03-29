@@ -32,6 +32,7 @@ MODEL_CONFIG = {
     "iters": 100,
     "print_epoch": 100,
     "test_epoch": 500,
+    "save_per": 1,
 }
 
 
@@ -111,8 +112,8 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
     test_data_loader = iter(test_data_loader)
 
     # model definition
-    netG = Generator().to(device)
-    netD = Discriminator().to(device)
+    netG = Generator()
+    netD = Discriminator()
 
     # weight initialize
     netG.apply(weights_init)
@@ -130,9 +131,16 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
         load_model(model=netD, dir=data_config["D_checkpoint_dir"], load_iter=last_iter)
 
     # parallelize of model
-    if "cuda" in device:
+    if torch.cuda.device_count() > 1:
+        print("NOTICE: use ", torch.cuda.device_count(), "GPUs")
         netG = nn.DataParallel(netG)
         netD = nn.DataParallel(netD)
+    else:
+        print(f"NOTICE: use {device}")
+
+    # model to device
+    netG.to(device)
+    netD.to(device)
 
     # set optimizer
     optimizer_d = torch.optim.Adam(
@@ -245,5 +253,6 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
                     os.path.join(data_config["test_output_dir"], f"{iter_}-{idx}.png"),
                 )
 
-        save_model(model=netG, dir=data_config["G_checkpoint_dir"], iter=iter_)
-        save_model(model=netD, dir=data_config["D_checkpoint_dir"], iter=iter_)
+        if iter_ % model_config["save_per"] == 0:
+            save_model(model=netG, dir=data_config["G_checkpoint_dir"], iter=iter_)
+            save_model(model=netD, dir=data_config["D_checkpoint_dir"], iter=iter_)
