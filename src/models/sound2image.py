@@ -23,7 +23,7 @@ class Generator(nn.Module):
 
         self.dn_block2 = InvertedRes2d(
             in_channels=16,
-            planes=64,
+            planes=32,  # 64
             out_channels=32,
             dropout=0,
             activation="leaky_relu",
@@ -35,7 +35,7 @@ class Generator(nn.Module):
 
         self.dn_block3 = InvertedRes2d(
             in_channels=32,
-            planes=128,
+            planes=64,  # 128
             out_channels=64,
             dropout=0,
             activation="leaky_relu",
@@ -47,7 +47,7 @@ class Generator(nn.Module):
 
         self.dn_block4 = InvertedRes2d(
             in_channels=64,
-            planes=256,
+            planes=128,  # 256
             out_channels=128,
             dropout=0,
             activation="leaky_relu",
@@ -59,7 +59,7 @@ class Generator(nn.Module):
 
         self.dn_block5 = InvertedRes2d(
             in_channels=128,
-            planes=512,
+            planes=256,  # 512
             out_channels=256,
             dropout=0,
             activation="leaky_relu",
@@ -71,7 +71,7 @@ class Generator(nn.Module):
 
         self.dn_block6 = InvertedRes2d(
             in_channels=256,
-            planes=512,
+            planes=256,  # 512
             out_channels=256,
             dropout=0,
             activation="leaky_relu",
@@ -90,18 +90,6 @@ class Generator(nn.Module):
             normalization="IN",
             downscale=True,
             seblock=False,
-            sn=sn,
-        )
-
-        self.dn_block8 = InvertedRes2d(
-            in_channels=512,
-            planes=1024,
-            out_channels=1024,
-            dropout=0,
-            activation="leaky_relu",
-            normalization="IN",
-            downscale=True,
-            seblock=True,
             sn=sn,
         )
 
@@ -143,7 +131,7 @@ class Generator(nn.Module):
 
         # UP:
         self.up_block1 = BlockUpsample2d(
-            in_channels=1024,
+            in_channels=512,
             out_channels=512,
             dropout=0.5,
             activation="relu",
@@ -175,7 +163,7 @@ class Generator(nn.Module):
         self.up_block4 = BlockUpsample2d(
             in_channels=256,
             out_channels=128,
-            dropout=0.5,
+            dropout=0,
             activation="relu",
             normalization="GN",
             seblock=False,
@@ -185,7 +173,7 @@ class Generator(nn.Module):
         self.up_block5 = BlockUpsample2d(
             in_channels=128,
             out_channels=128,
-            dropout=0.5,
+            dropout=0,
             activation="relu",
             normalization="GN",
             seblock=False,
@@ -195,7 +183,7 @@ class Generator(nn.Module):
         self.up_block6 = BlockUpsample2d(
             in_channels=128,
             out_channels=64,
-            dropout=0.5,
+            dropout=0,
             activation="relu",
             normalization="GN",
             seblock=False,
@@ -209,7 +197,7 @@ class Generator(nn.Module):
         self.up_block7 = BlockUpsample2d(
             in_channels=64,
             out_channels=32,
-            dropout=0.5,
+            dropout=0,
             activation="relu",
             normalization="GN",
             seblock=False,
@@ -219,7 +207,7 @@ class Generator(nn.Module):
         self.up_block8 = BlockUpsample2d(
             in_channels=32,
             out_channels=16,
-            dropout=0.5,
+            dropout=0,
             activation="relu",
             normalization="GN",
             seblock=False,
@@ -264,8 +252,8 @@ class Generator(nn.Module):
         # Dimention -> [B, 512, 16, 2]
         dn7 = self.dn_block7(dn6)
 
-        # Dimention -> [B, 1024, 1, 1]
-        dn8 = self.global_avg_pool(self.dn_block8(dn7))
+        # Dimention -> [B, 512, 1, 1]
+        dn8 = self.global_avg_pool(dn7)
 
         # UP:
         #   BLOCK: Residual block
@@ -283,7 +271,7 @@ class Generator(nn.Module):
         skip3 = self.skip3(dn5)
         up = self.up_block3(up) + skip3
 
-        # Dimention -> [B, 128, 16, 16] with drop_out + Conv_spatial_wise([B, 128, 16, 128] -> [B, 128, 16, 16])
+        # Dimention -> [B, 128, 16, 16] + Conv_spatial_wise([B, 128, 16, 128] -> [B, 128, 16, 16])
         skip4 = self.skip4(dn4)
         up = self.up_block4(up) + skip4
 
@@ -317,7 +305,7 @@ class Discriminator(nn.Module):
             in_channels=3,
             out_channels=16,
             activation="leaky_relu",
-            normalization=None,
+            normalization="GN",
             downscale=False,
             seblock=False,
             sn=sn,
@@ -325,11 +313,11 @@ class Discriminator(nn.Module):
 
         self.dn_block2 = InvertedRes2d(
             in_channels=16,
-            planes=64,
+            planes=32,  # 64
             out_channels=32,
             dropout=0,
             activation="leaky_relu",
-            normalization=None,
+            normalization="GN",
             downscale=True,
             seblock=False,
             sn=sn,
@@ -337,11 +325,11 @@ class Discriminator(nn.Module):
 
         self.dn_block3 = InvertedRes2d(
             in_channels=32,
-            planes=128,
+            planes=64,  # 128
             out_channels=64,
             dropout=0,
             activation="leaky_relu",
-            normalization=None,
+            normalization="GN",
             downscale=True,
             seblock=False,
             sn=sn,
@@ -353,11 +341,11 @@ class Discriminator(nn.Module):
 
         self.dn_block4 = InvertedRes2d(
             in_channels=64,
-            planes=256,
+            planes=128,  # 256
             out_channels=128,
             dropout=0,
             activation="leaky_relu",
-            normalization=None,
+            normalization="GN",
             downscale=True,
             seblock=False,
             sn=sn,
@@ -365,11 +353,11 @@ class Discriminator(nn.Module):
 
         self.dn_block5 = InvertedRes2d(
             in_channels=128,
-            planes=256,
+            planes=128,  # 256
             out_channels=128,
             dropout=0,
             activation="leaky_relu",
-            normalization=None,
+            normalization="GN",
             downscale=True,
             seblock=False,
             sn=sn,
@@ -377,11 +365,11 @@ class Discriminator(nn.Module):
 
         self.dn_block6 = InvertedRes2d(
             in_channels=128,
-            planes=512,
+            planes=256,  # 512
             out_channels=256,
             dropout=0,
             activation="leaky_relu",
-            normalization=None,
+            normalization="GN",
             downscale=True,
             seblock=False,
             sn=sn,
@@ -389,11 +377,11 @@ class Discriminator(nn.Module):
 
         self.dn_block7 = InvertedRes2d(
             in_channels=256,
-            planes=512,
+            planes=256,  # 512
             out_channels=256,
             dropout=0,
             activation="leaky_relu",
-            normalization=None,
+            normalization="GN",
             downscale=True,
             seblock=False,
             sn=sn,

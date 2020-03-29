@@ -27,7 +27,9 @@ def load_model(model, dir, load_iter=None):
         return load_iter
 
     check_points = glob(os.path.join(dir, "checkpoint-*"))
-    check_points = sorted(check_points, key=lambda x: int(x.replace("checkpoint-", "")))
+    check_points = sorted(
+        check_points, key=lambda x: int(x.split("/")[-1].replace("checkpoint-", ""))
+    )
 
     # skip if there are no checkpoints
     if len(check_points) == 0:

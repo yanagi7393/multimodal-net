@@ -57,7 +57,9 @@ def stft_to_mel(magnitude, phase):
     return melspecgrams
 
 
-def video_to_datasets(video_path_list, offsets=[10], save_dir="./dataset", device="cpu"):
+def video_to_datasets(
+    video_path_list, offsets=[10], save_dir="./dataset", device="cpu"
+):
     dirs = {
         data_type: os.path.join(save_dir, data_type)
         for data_type in FILENAME_TEMPLATE.keys()
@@ -104,7 +106,9 @@ def video_to_datasets(video_path_list, offsets=[10], save_dir="./dataset", devic
                 for magnitude, phase in zip(magnitude_list, phase_list)
             ]
             melspecgrams = parallelize(
-                func=stft_to_mel, params=stft_to_mel_params, n_jobs=DEFAULT_CONFIG["n_jobs"]
+                func=stft_to_mel,
+                params=stft_to_mel_params,
+                n_jobs=DEFAULT_CONFIG["n_jobs"],
             )
 
             log_mel_spec_list = [item[0] for item in melspecgrams]

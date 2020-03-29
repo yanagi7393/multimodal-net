@@ -61,10 +61,10 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
         )
         mel_data_loader = DataLoader(
             dataset=mel_dataset,
-            batch_size=batch_size,
+            batch_size=model_config["batch_size"],
             shuffle=False,
             pin_memory=True,
-            num_workers=batch_size // 2,
+            num_workers=model_config["batch_size"] // 2,
         )
 
     # Data definitions
@@ -89,10 +89,10 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
     )
     data_loader = DataLoader(
         dataset=dataset,
-        batch_size=batch_size,
+        batch_size=model_config["batch_size"],
         shuffle=True,
         pin_memory=True,
-        num_workers=batch_size // 2,
+        num_workers=model_config["batch_size"] // 2,
     )
 
     # Define train_data loader
@@ -103,10 +103,10 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
     )
     test_data_loader = DataLoader(
         dataset=test_dataset,
-        batch_size=batch_size,
+        batch_size=model_config["batch_size"],
         shuffle=True,
         pin_memory=True,
-        num_workers=batch_size // 2,
+        num_workers=model_config["batch_size"] // 2,
     )
     test_data_loader = iter(test_data_loader)
 
@@ -168,13 +168,13 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
 
             D_real = netD(data_dict["frame"]).view(-1).mean()
 
-            gen_frames = netG(mel_data)
-            D_fake = netD(gen_frames.detach()).view(-1).mean()
+            gen_frames = netG(mel_data).detach()
+            D_fake = netD(gen_frames).view(-1).mean()
 
             gp = calc_gp(
                 discriminator=netD,
                 real_images=netD(data_dict["frame"]),
-                fake_images=gen_frames.detach(),
+                fake_images=gen_frames,
                 device=device,
             )
 
@@ -224,8 +224,18 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
                 with torch.no_grad():
                     gen_frames = netG(mel_test_data).detach()
 
-                concat_frames = torch.cat(
-                    list(chain(*[(fake_img, real_img) for fake_img, real_img in zip(gen_frames.cpu(), test_data_dict["frame"])])), dim=0
+                concat_frames = torch.stack(
+                    list(
+                        chain(
+                            *[
+                                (fake_img, real_img)
+                                for fake_img, real_img in zip(
+                                    gen_frames.cpu(), test_data_dict["frame"]
+                                )
+                            ]
+                        )
+                    ),
+                    dim=0,
                 )
                 concat_frames = torchvision.utils.make_grid(
                     concat_frames, nrow=2, padding=10
