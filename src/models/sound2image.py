@@ -4,6 +4,7 @@ from torch.nn import functional as F
 from modules.inverted_residual import InvertedRes2d
 from modules.residual import FirstBlockDown2d, BlockUpsample2d
 from modules.self_attention import SelfAttention2d
+from modules.norms import NORMS
 
 
 class Generator(nn.Module):
@@ -214,6 +215,10 @@ class Generator(nn.Module):
             sn=sn,
         )
 
+        self.last_norm = NORMS["IN"](num_channels=16)
+
+        self.last_act = getattr(F, "relu")
+
         self.last_conv = nn.Conv2d(
             in_channels=16,
             out_channels=3,
@@ -290,14 +295,17 @@ class Generator(nn.Module):
         # Dimention -> [B, 16, 256, 256]
         up = self.up_block8(up)
 
+        # Last activation
+        up = self.last_conv(self.last_act(self.last_norm(up)))
+
         # Dimention -> [B, 3, 256, 256]
-        up = self.last_tanh(self.last_conv(up))
+        up = self.last_tanh(up)
 
         return up
 
 
 class Discriminator(nn.Module):
-    def __init__(self, self_attention=True, sn=True):
+    def __init__(self, self_attention=True, sn=False):
         super().__init__()
 
         # DOWN:
@@ -389,8 +397,19 @@ class Discriminator(nn.Module):
 
         self.global_avg_pool = nn.AdaptiveAvgPool2d([1, 1])
 
-        self.output = nn.utils.spectral_norm(
-            nn.Conv2d(
+        if sn is True:
+            self.output = nn.utils.spectral_norm(
+                nn.Conv2d(
+                    in_channels=256,
+                    out_channels=1,
+                    kernel_size=1,
+                    bias=False,
+                    padding=0,
+                    stride=1,
+                )
+            )
+        else:
+            self.output = nn.Conv2d(
                 in_channels=256,
                 out_channels=1,
                 kernel_size=1,
@@ -398,7 +417,6 @@ class Discriminator(nn.Module):
                 padding=0,
                 stride=1,
             )
-        )
 
     def forward(self, input):
         # DOWN:
@@ -411,6 +429,9 @@ class Discriminator(nn.Module):
 
         # Dimention -> [B, 32, 128, 128]
         dn = self.dn_block2(dn)
+
+        # Get feature vector
+        feature_vec = dn
 
         # Dimention -> [B, 64, 64, 64]
         dn = self.dn_block3(dn)
@@ -436,4 +457,4 @@ class Discriminator(nn.Module):
         # Dimention -> [B, 1, 1, 1]
         dn = self.output(dn)
 
-        return dn
+        return feature_vec, dn

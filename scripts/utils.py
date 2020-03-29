@@ -41,7 +41,7 @@ def load_model(model, dir, load_iter=None):
     model.load_state_dict(torch.load(check_point))
     print("[+] Model is loaded")
 
-    return int(check_point.replace("checkpoint-", ""))
+    return int(check_point.split("/")[-1].replace("checkpoint-", ""))
 
 
 def weights_init(m):
@@ -66,7 +66,7 @@ def calc_gp(discriminator, real_images, fake_images, lambda_term=10, device="cpu
     interpolated = (alpha * real_images + ((1 - alpha) * fake_images)).requires_grad_(
         True
     )
-    prob_interpolated = discriminator(interpolated)
+    _, prob_interpolated = discriminator(interpolated)
     grad_outputs = torch.ones(prob_interpolated.size()).to(device)
 
     gradients = torch.autograd.grad(

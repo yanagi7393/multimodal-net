@@ -33,6 +33,7 @@ MODEL_CONFIG = {
     "print_epoch": 100,
     "test_epoch": 500,
     "save_per": 1,
+    "fm_lamba": 0,
 }
 
 
@@ -109,7 +110,7 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
         pin_memory=True,
         num_workers=model_config["batch_size"] // 2,
     )
-    test_data_loader = iter(test_data_loader)
+    test_data_loader_ = iter(test_data_loader)
 
     # model definition
     netG = Generator()
@@ -118,6 +119,14 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
     # weight initialize
     netG.apply(weights_init)
     netD.apply(weights_init)
+
+    # parallelize of model
+    if torch.cuda.device_count() > 1:
+        print("NOTICE: use ", torch.cuda.device_count(), "GPUs")
+        netG = nn.DataParallel(netG)
+        netD = nn.DataParallel(netD)
+    else:
+        print(f"NOTICE: use {device}")
 
     # load model
     g_last_iter = load_model(model=netG, dir=data_config["G_checkpoint_dir"])
@@ -129,14 +138,6 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
 
     if d_last_iter != last_iter:
         load_model(model=netD, dir=data_config["D_checkpoint_dir"], load_iter=last_iter)
-
-    # parallelize of model
-    if torch.cuda.device_count() > 1:
-        print("NOTICE: use ", torch.cuda.device_count(), "GPUs")
-        netG = nn.DataParallel(netG)
-        netD = nn.DataParallel(netD)
-    else:
-        print(f"NOTICE: use {device}")
 
     # model to device
     netG.to(device)
@@ -174,14 +175,17 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             netD.zero_grad()
             netG.zero_grad()
 
-            D_real = netD(data_dict["frame"]).view(-1).mean()
+            feature_real, D_real_out = netD(data_dict["frame"])
+            feature_real = feature_real.detach()
+            D_real = D_real_out.view(-1).mean()
 
             gen_frames = netG(mel_data)
-            D_fake = netD(gen_frames.detach()).view(-1).mean()
+            _, D_fake_out = netD(gen_frames.detach())
+            D_fake = D_fake_out.view(-1).mean()
 
             gp = calc_gp(
                 discriminator=netD,
-                real_images=netD(data_dict["frame"]),
+                real_images=data_dict["frame"],
                 fake_images=gen_frames.detach(),
                 device=device,
             )
@@ -198,8 +202,11 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             netD.zero_grad()
             netG.zero_grad()
 
-            DG_fake = netD(gen_frames).view(-1).mean()
-            g_loss = -1 * DG_fake
+            feature_fake, DG_fake_out = netD(gen_frames)
+            DG_fake = DG_fake_out.view(-1).mean()
+            g_loss = (
+                (feature_real - feature_fake).view(-1).mean() * model_config["fm_lamba"]
+            ) - DG_fake
             g_loss.backward()
 
             optimizer_g.step()
@@ -214,7 +221,12 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
                 netD.eval()
                 netG.eval()
 
-                test_data_dict = next(test_data_loader)
+                try:
+                    test_data_dict = next(test_data_loader_)
+                except StopIteration:
+                    test_data_loader_ = iter(test_data_loader)
+                    test_data_dict = next(test_data_loader_)
+
                 test_data_dict = dict(
                     [
                         (key, value.to(device))
