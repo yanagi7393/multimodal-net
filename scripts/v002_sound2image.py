@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 from models.sound2image import Generator, Discriminator
 from copy import copy
 import os
+from itertools import chain
 
 
 DATA_CONFIG = {
@@ -34,9 +35,11 @@ MODEL_CONFIG = {
 }
 
 
-def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="cuda"):
+def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="cuda"):
     # refine path with exp_dir
     data_config = copy(DATA_CONFIG)
+    model_config = copy(MODEL_CONFIG)
+    model_config = {**model_config, **config}
 
     for key in [
         "mel_normalizer_savefile",
@@ -134,16 +137,16 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
     # set optimizer
     optimizer_d = torch.optim.Adam(
         netD.parameters(),
-        MODEL_CONFIG["lr"],
-        (MODEL_CONFIG["beta1"], MODEL_CONFIG["beta2"]),
+        model_config["lr"],
+        (model_config["beta1"], model_config["beta2"]),
     )
     optimizer_g = torch.optim.Adam(
         netG.parameters(),
-        MODEL_CONFIG["lr"],
-        (MODEL_CONFIG["beta1"], MODEL_CONFIG["beta2"]),
+        model_config["lr"],
+        (model_config["beta1"], model_config["beta2"]),
     )
 
-    for iter_ in range(MODEL_CONFIG["iters"]):
+    for iter_ in range(model_config["iters"]):
         if iter_ <= last_iter:
             continue
 
@@ -194,12 +197,12 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
 
             optimizer_g.step()
 
-            if idx % MODEL_CONFIG["print_epoch"] == 0:
+            if idx % model_config["print_epoch"] == 0:
                 print(
                     f"INFO: D_loss: {d_loss.item():4f} | G_loss: {g_loss.item():4f} | W_D: {wasserstein_D.item():4f}"
                 )
 
-            if idx % MODEL_CONFIG["test_epoch"] == 0:
+            if idx % model_config["test_epoch"] == 0:
                 # EVAL MODE
                 netD.eval()
                 netG.eval()
@@ -222,7 +225,7 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
                     gen_frames = netG(mel_test_data).detach()
 
                 concat_frames = torch.cat(
-                    [gen_frames.cpu(), test_data_dict["frame"]], dim=0
+                    list(chain(*[(fake_img, real_img) for fake_img, real_img in zip(gen_frames.cpu(), test_data_dict["frame"])])), dim=0
                 )
                 concat_frames = torchvision.utils.make_grid(
                     concat_frames, nrow=2, padding=10
