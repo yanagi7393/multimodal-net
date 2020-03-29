@@ -106,21 +106,25 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
     netG = Generator().to(device)
     netD = Discriminator().to(device)
 
+    # weight initialize
+    netG.apply(weights_init)
+    netD.apply(weights_init)
+
     # load model
     g_last_iter = load_model(model=netG, dir=data_config["G_checkpoint_dir"])
     d_last_iter = load_model(model=netD, dir=data_config["D_checkpoint_dir"])
 
-    if g_last_iter != d_last_iter:
-        raise ValueError(f"g_last_iter: {g_last_iter} != d_last_iter: {d_last_iter}")
+    last_iter = min(g_last_iter, d_last_iter)
+    if g_last_iter != last_iter:
+        load_model(model=netG, dir=data_config["G_checkpoint_dir"], load_iter=last_iter)
+
+    if d_last_iter != last_iter:
+        load_model(model=netD, dir=data_config["D_checkpoint_dir"], load_iter=last_iter)
 
     # parallelize of model
     if "cuda" in device:
         netG = nn.DataParallel(netG)
         netD = nn.DataParallel(netD)
-
-    # weight initialize
-    netG.apply(weights_init)
-    netD.apply(weights_init)
 
     # set optimizer
     optimizer_d = torch.optim.Adam(

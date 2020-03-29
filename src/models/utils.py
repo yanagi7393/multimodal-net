@@ -12,14 +12,24 @@ def save_model(model, dir, iter):
     print("[+] Model is saved")
 
 
-def load_model(model, dir):
+def load_model(model, dir, load_iter=None):
     if not os.path.isdir(dir):
         print("[!] Load is failed")
         return -1
 
+    # If load_iter has value
+    if load_iter is not None:
+        if load_iter == -1:
+            print("[!] Load is failed")
+            return -1
+
+        model.load_state_dict(torch.load(os.path.join(dir, f"checkpoint-{load_iter}")))
+        return load_iter
+
     check_points = glob(os.path.join(dir, "checkpoint-*"))
     check_points = sorted(check_points, key=lambda x: int(x.replace("checkpoint-", "")))
 
+    # skip if there are no checkpoints
     if len(check_points) == 0:
         print("[!] Load is failed")
         return -1
