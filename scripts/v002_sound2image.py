@@ -168,13 +168,13 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
 
             D_real = netD(data_dict["frame"]).view(-1).mean()
 
-            gen_frames = netG(mel_data).detach()
-            D_fake = netD(gen_frames).view(-1).mean()
+            gen_frames = netG(mel_data)
+            D_fake = netD(gen_frames.detach()).view(-1).mean()
 
             gp = calc_gp(
                 discriminator=netD,
                 real_images=netD(data_dict["frame"]),
-                fake_images=gen_frames,
+                fake_images=gen_frames.detach(),
                 device=device,
             )
 
@@ -190,7 +190,6 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             netD.zero_grad()
             netG.zero_grad()
 
-            gen_frames = netG(mel_data)
             DG_fake = netD(gen_frames).view(-1).mean()
             g_loss = -1 * DG_fake
             g_loss.backward()
