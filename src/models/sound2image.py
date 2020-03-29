@@ -1,237 +1,451 @@
 import torch
 import torch.nn as nn
-from .utils import calc_gp, weights_init, save_model, load_model
-from datasets.dataset import Dataset
-from preprocessor import (
-    MelNormalizer,
-    MelDeNormalizer,
-    FrameNormalizer,
-    FrameDeNormalizer,
-)
-import torchvision
-from torch.utils.data import DataLoader
-from modules.sound2image import Generator, Discriminator
-from copy import copy
-import os
+from torch.nn import functional as F
+from modules.inverted_residual import InvertedRes2d
+from modules.residual import FirstBlockDown2d, BlockUpsample2d
+from modules.self_attention import SelfAttention2d
 
 
-DATA_CONFIG = {
-    "load_files": ["frame", "log_mel_spec", "mel_if"],
-    "mel_normalizer_savefile": "./normalizer/mel_normalizer.json",
-    "normalizer_dir": "./normalizer",
-    "D_checkpoint_dir": "./check_points/Discriminator",
-    "G_checkpoint_dir": "./check_points/Generator",
-    "test_output_dir": "./test_outputs",
-}
+class Generator(nn.Module):
+    def __init__(self, self_attention=True, sn=False):
+        super().__init__()
 
-MODEL_CONFIG = {
-    "lr": 0.0001,
-    "beta1": 0,
-    "beta2": 0.99,
-    "iters": 100,
-    "print_epoch": 100,
-    "test_epoch": 500,
-}
-
-
-def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="cuda"):
-    # refine path with exp_dir
-    data_config = copy(DATA_CONFIG)
-
-    for key in [
-        "mel_normalizer_savefile",
-        "normalizer_dir",
-        "D_checkpoint_dir",
-        "G_checkpoint_dir",
-        "test_output_dir",
-    ]:
-        data_config[key] = os.path.join(exp_dir, data_config[key])
-
-        if "_dir" in key:
-            os.makedirs(data_config[key], exist_ok=True)
-
-    # for normalizer of mel
-    mel_data_loader = None
-    if not os.path.isfile(data_config["mel_normalizer_savefile"]):
-        mel_dataset = Dataset(
-            data_dir=data_dir, transforms={}, load_files=["log_mel_spec", "mel_if"]
-        )
-        mel_data_loader = DataLoader(
-            dataset=mel_dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            pin_memory=True,
-            num_workers=batch_size // 2,
+        # DOWN:
+        self.dn_block1 = FirstBlockDown2d(
+            in_channels=2,
+            out_channels=16,
+            activation="leaky_relu",
+            normalization="IN",
+            downscale=False,
+            seblock=False,
+            sn=sn,
         )
 
-    # Data definitions
-    transforms = {
-        "frame": torchvision.transforms.Compose(
-            [
-                torchvision.transforms.ToPILImage(),
-                torchvision.transforms.RandomVerticalFlip(p=0.5),
-                torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-            ]
-        ),
-        "mel": MelNormalizer(
-            dataloader=mel_data_loader,
-            savefile_path=data_config["mel_normalizer_savefile"],
-        ),
-    }
+        self.dn_block2 = InvertedRes2d(
+            in_channels=16,
+            planes=64,
+            out_channels=32,
+            dropout=0,
+            activation="leaky_relu",
+            normalization="IN",
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
 
-    # Define train_data loader
-    dataset = Dataset(
-        data_dir=data_dir, transforms=transforms, load_files=data_config["load_files"]
-    )
-    data_loader = DataLoader(
-        dataset=dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        pin_memory=True,
-        num_workers=batch_size // 2,
-    )
+        self.dn_block3 = InvertedRes2d(
+            in_channels=32,
+            planes=128,
+            out_channels=64,
+            dropout=0,
+            activation="leaky_relu",
+            normalization="IN",
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
 
-    # Define train_data loader
-    test_dataset = Dataset(
-        data_dir=test_data_dir,
-        transforms=transforms,
-        load_files=data_config["load_files"],
-    )
-    test_data_loader = DataLoader(
-        dataset=test_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        pin_memory=True,
-        num_workers=batch_size // 2,
-    )
-    test_data_loader = iter(test_data_loader)
+        self.dn_block4 = InvertedRes2d(
+            in_channels=64,
+            planes=256,
+            out_channels=128,
+            dropout=0,
+            activation="leaky_relu",
+            normalization="IN",
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
 
-    # model definition
-    netG = Generator().to(device)
-    netD = Discriminator().to(device)
+        self.dn_block5 = InvertedRes2d(
+            in_channels=128,
+            planes=512,
+            out_channels=256,
+            dropout=0,
+            activation="leaky_relu",
+            normalization="IN",
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
 
-    # weight initialize
-    netG.apply(weights_init)
-    netD.apply(weights_init)
+        self.dn_block6 = InvertedRes2d(
+            in_channels=256,
+            planes=512,
+            out_channels=256,
+            dropout=0,
+            activation="leaky_relu",
+            normalization="IN",
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
 
-    # load model
-    g_last_iter = load_model(model=netG, dir=data_config["G_checkpoint_dir"])
-    d_last_iter = load_model(model=netD, dir=data_config["D_checkpoint_dir"])
+        self.dn_block7 = InvertedRes2d(
+            in_channels=256,
+            planes=512,
+            out_channels=512,
+            dropout=0,
+            activation="leaky_relu",
+            normalization="IN",
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
 
-    last_iter = min(g_last_iter, d_last_iter)
-    if g_last_iter != last_iter:
-        load_model(model=netG, dir=data_config["G_checkpoint_dir"], load_iter=last_iter)
+        self.dn_block8 = InvertedRes2d(
+            in_channels=512,
+            planes=1024,
+            out_channels=1024,
+            dropout=0,
+            activation="leaky_relu",
+            normalization="IN",
+            downscale=True,
+            seblock=True,
+            sn=sn,
+        )
 
-    if d_last_iter != last_iter:
-        load_model(model=netD, dir=data_config["D_checkpoint_dir"], load_iter=last_iter)
+        self.global_avg_pool = nn.AdaptiveAvgPool2d([1, 1])
 
-    # parallelize of model
-    if "cuda" in device:
-        netG = nn.DataParallel(netG)
-        netD = nn.DataParallel(netD)
+        # SKIP:
+        self.skip1 = nn.Conv2d(
+            in_channels=512,
+            out_channels=512,
+            kernel_size=[1, 8],
+            stride=[1, 8],
+            padding=[0, 0],
+            groups=512,
+        )
+        self.skip2 = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=[1, 8],
+            stride=[1, 8],
+            padding=[0, 0],
+            groups=256,
+        )
+        self.skip3 = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=[1, 8],
+            stride=[1, 8],
+            padding=[0, 0],
+            groups=256,
+        )
+        self.skip4 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=[1, 8],
+            stride=[1, 8],
+            padding=[0, 0],
+            groups=128,
+        )
 
-    # set optimizer
-    optimizer_d = torch.optim.Adam(
-        netD.parameters(),
-        MODEL_CONFIG["lr"],
-        (MODEL_CONFIG["beta1"], MODEL_CONFIG["beta2"]),
-    )
-    optimizer_g = torch.optim.Adam(
-        netG.parameters(),
-        MODEL_CONFIG["lr"],
-        (MODEL_CONFIG["beta1"], MODEL_CONFIG["beta2"]),
-    )
+        # UP:
+        self.up_block1 = BlockUpsample2d(
+            in_channels=1024,
+            out_channels=512,
+            dropout=0.5,
+            activation="relu",
+            normalization="GN",
+            seblock=False,
+            sn=sn,
+        )
 
-    for iter_ in range(MODEL_CONFIG["iters"]):
-        if iter_ <= last_iter:
-            continue
+        self.up_block2 = BlockUpsample2d(
+            in_channels=512,
+            out_channels=256,
+            dropout=0.5,
+            activation="relu",
+            normalization="GN",
+            seblock=False,
+            sn=sn,
+        )
 
-        for idx, data_dict in enumerate(data_loader):
-            data_dict = {key: value.to(device) for key, value in data_dict.items()}
-            mel_data = torch.cat(
-                [data_dict["log_mel_spec"], data_dict["mel_if"]], dim=1
+        self.up_block3 = BlockUpsample2d(
+            in_channels=256,
+            out_channels=256,
+            dropout=0.5,
+            activation="relu",
+            normalization="GN",
+            seblock=False,
+            sn=sn,
+        )
+
+        self.up_block4 = BlockUpsample2d(
+            in_channels=256,
+            out_channels=128,
+            dropout=0.5,
+            activation="relu",
+            normalization="GN",
+            seblock=False,
+            sn=sn,
+        )
+
+        self.up_block5 = BlockUpsample2d(
+            in_channels=128,
+            out_channels=128,
+            dropout=0.5,
+            activation="relu",
+            normalization="GN",
+            seblock=False,
+            sn=sn,
+        )
+
+        self.up_block6 = BlockUpsample2d(
+            in_channels=128,
+            out_channels=64,
+            dropout=0.5,
+            activation="relu",
+            normalization="GN",
+            seblock=False,
+            sn=sn,
+        )
+
+        self.sa_layer = None
+        if self_attention is True:
+            self.sa_layer = SelfAttention2d(in_channels=64, sn=sn)
+
+        self.up_block7 = BlockUpsample2d(
+            in_channels=64,
+            out_channels=32,
+            dropout=0.5,
+            activation="relu",
+            normalization="GN",
+            seblock=False,
+            sn=sn,
+        )
+
+        self.up_block7 = BlockUpsample2d(
+            in_channels=32,
+            out_channels=16,
+            dropout=0.5,
+            activation="relu",
+            normalization="GN",
+            seblock=False,
+            sn=sn,
+        )
+
+        self.last_conv = nn.Conv2d(
+            in_channels=16,
+            out_channels=3,
+            kernel_size=1,
+            bias=False,
+            padding=0,
+            stride=1,
+        )
+
+        self.last_tanh = nn.Tanh()
+
+    def forward(self, input):
+        # DOWN:
+        #   BLOCK: Inverted Residual block
+        #   ACTIVATION_FUNC: LReLU
+        #   NORM: IN
+        # Input Dimention: [B, 2, 128, 1024]
+        # Dimention -> [B, 16, 128, 1024]
+        dn = self.dn_block1(input)
+
+        # Dimention -> [B, 32, 64, 512]
+        dn = self.dn_block2(dn)
+
+        # Dimention -> [B, 64, 32, 256]
+        dn = self.dn_block3(dn)
+
+        # Dimention -> [B, 128, 16, 128]
+        dn = self.dn_block4(dn)
+
+        # Dimention -> [B, 256, 8, 64]
+        dn5 = self.dn_block5(dn)
+
+        # Dimention -> [B, 256, 4, 32]
+        dn6 = self.dn_block6(dn5)
+
+        # Dimention -> [B, 512, 2, 16]
+        dn7 = self.dn_block7(dn6)
+
+        # Dimention -> [B, 1024, 1, 1]
+        dn8 = self.global_avg_pool(self.dn_block8(dn7))
+
+        # UP:
+        #   BLOCK: Residual block
+        #   ACTIVATION_FUNC: ReLU
+        #   NORM: BIN (AdaIN?)
+        # Dimention -> [B, 512, 2, 2] with drop_out + Conv_spatial_wise([B, 512, 2, 16] -> [B, 512, 2, 2])
+        skip1 = self.skip1(dn7)
+        up = self.up_block1(dn8) + skip1
+
+        # Dimention -> [B, 256, 4, 4] with drop_out + Conv_spatial_wise([B, 256, 4, 32] -> [B, 256, 4, 4])
+        skip2 = self.skip2(dn6)
+        up = self.up_block2(up) + skip2
+
+        # Dimention -> [B, 256, 8, 8] with drop_out + Conv_spatial_wise([B, 256, 8, 64] -> [B, 256, 8, 8])
+        skip3 = self.skip3(dn5)
+        up = self.up_block3(up) + skip3
+
+        # Dimention -> [B, 128, 16, 16] with drop_out + Conv_spatial_wise([B, 128, 16, 128] -> [B, 128, 16, 16])
+        skip4 = self.skip4(dn4)
+        up = self.up_block4(up) + skip4
+
+        # Dimention -> [B, 128, 32, 32]
+        up = self.up_block5(up)
+
+        # Dimention -> [B, 64, 64, 64]
+        up = self.up_block6(up)
+
+        if self.sa_layer is not None:
+            up = self.sa_layer(up)
+
+        # Dimention -> [B, 32, 128, 128]
+        up = self.up_block7(up)
+
+        # Dimention -> [B, 16, 256, 256]
+        up = self.up_block8(up)
+
+        # Dimention -> [B, 3, 256, 256]
+        up = self.last_tanh(self.last_conv(up))
+
+        return up
+
+
+class Discriminator(nn.Module):
+    def __init__(self, self_attention=True, sn=True):
+        super().__init__()
+
+        # DOWN:
+        self.dn_block1 = FirstBlockDown2d(
+            in_channels=3,
+            out_channels=16,
+            activation="leaky_relu",
+            normalization=None,
+            downscale=False,
+            seblock=False,
+            sn=sn,
+        )
+
+        self.dn_block2 = InvertedRes2d(
+            in_channels=16,
+            planes=64,
+            out_channels=32,
+            dropout=0,
+            activation="leaky_relu",
+            normalization=None,
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
+
+        self.dn_block3 = InvertedRes2d(
+            in_channels=32,
+            planes=128,
+            out_channels=64,
+            dropout=0,
+            activation="leaky_relu",
+            normalization=None,
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
+
+        self.sa_layer = None
+        if self_attention is True:
+            self.sa_layer = SelfAttention2d(in_channels=64, sn=sn)
+
+        self.dn_block4 = InvertedRes2d(
+            in_channels=64,
+            planes=256,
+            out_channels=128,
+            dropout=0,
+            activation="leaky_relu",
+            normalization=None,
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
+
+        self.dn_block5 = InvertedRes2d(
+            in_channels=128,
+            planes=256,
+            out_channels=128,
+            dropout=0,
+            activation="leaky_relu",
+            normalization=None,
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
+
+        self.dn_block6 = InvertedRes2d(
+            in_channels=256,
+            planes=512,
+            out_channels=256,
+            dropout=0,
+            activation="leaky_relu",
+            normalization=None,
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
+
+        self.dn_block7 = InvertedRes2d(
+            in_channels=256,
+            planes=512,
+            out_channels=256,
+            dropout=0,
+            activation="leaky_relu",
+            normalization=None,
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
+
+        self.global_avg_pool = nn.AdaptiveAvgPool2d([1, 1])
+
+        self.output = nn.utils.spectral_norm(
+            nn.Conv2d(
+                in_channels=256,
+                out_channels=1,
+                kernel_size=1,
+                bias=False,
+                padding=0,
+                stride=1,
             )
+        )
 
-            # TRAIN MODE
-            netD.train()
-            netG.train()
+    def forward(self, input):
+        # DOWN:
+        #   BLOCK: Inverted Residual block
+        #   ACTIVATION_FUNC: LReLU
+        #   NORM: SN
+        # Input Dimention: [B, 3, 256, 256]
+        # Dimention -> [B, 16, 256, 256]
+        dn = self.dn_block1(input)
 
-            ############
-            # Update D #
-            ############
-            netD.zero_grad()
-            netG.zero_grad()
+        # Dimention -> [B, 32, 128, 128]
+        dn = self.dn_block2(dn)
 
-            D_real = netD(data_dict["frame"]).view(-1).mean()
+        # Dimention -> [B, 64, 64, 64]
+        dn = self.dn_block3(dn)
 
-            gen_frames = netG(mel_data)
-            D_fake = netD(gen_frames.detach()).view(-1).mean()
+        if self.sa_layer is not None:
+            dn = self.sa_layer(dn)
 
-            gp = calc_gp(
-                discriminator=netD,
-                real_images=netD(data_dict["frame"]),
-                fake_images=gen_frames.detach(),
-                device=device,
-            )
+        # Dimention -> [B, 128, 32, 32]
+        dn = self.dn_block4(dn)
 
-            wasserstein_D = D_real - D_fake
-            d_loss = D_fake - D_real + gp
-            d_loss.backward()
+        # Dimention -> [B, 128, 16, 16]
+        dn = self.dn_block5(dn)
 
-            optimizer_d.step()
+        # Dimention -> [B, 256, 8, 8]
+        dn = self.dn_block6(dn)
 
-            ############
-            # Update G #
-            ############
-            netD.zero_grad()
-            netG.zero_grad()
+        # Dimention -> [B, 256, 4, 4]
+        dn = self.dn_block7(dn)
 
-            gen_frames = netG(mel_data)
-            DG_fake = netD(gen_frames).view(-1).mean()
-            g_loss = -1 * DG_fake
-            g_loss.backward()
+        # Dimention -> [B, 256, 1, 1]
+        dn = self.global_avg_pool(dn)
 
-            optimizer_g.step()
+        # Dimention -> [B, 1, 1, 1]
+        dn = self.output(dn)
 
-            if idx % MODEL_CONFIG["print_epoch"] == 0:
-                print(
-                    f"INFO: D_loss: {d_loss.item():4f} | G_loss: {g_loss.item():4f} | W_D: {wasserstein_D.item():4f}"
-                )
-
-            if idx % MODEL_CONFIG["test_epoch"] == 0:
-                # EVAL MODE
-                netD.eval()
-                netG.eval()
-
-                test_data_dict = next(test_data_loader)
-                test_data_dict = dict(
-                    [
-                        (key, value.to(device))
-                        if key in ["log_mel_spec", "mel_if"]
-                        else (key, value.to("cpu"))
-                        for key, value in test_data_dict.items()
-                    ]
-                )
-
-                mel_test_data = torch.cat(
-                    [test_data_dict["log_mel_spec"], test_data_dict["mel_if"]], dim=1
-                )
-
-                with torch.no_grad():
-                    gen_frames = netG(mel_test_data).detach()
-
-                concat_frames = torch.cat(
-                    [gen_frames.cpu(), test_data_dict["frame"]], dim=0
-                )
-                concat_frames = torchvision.utils.make_grid(
-                    concat_frames, nrow=2, padding=10
-                )
-
-                torchvision.utils.save_image(
-                    concat_frames,
-                    os.path.join(data_config["test_output_dir"], f"{iter_}-{idx}.png"),
-                )
-
-        save_model(model=netG, dir=data_config["G_checkpoint_dir"], iter=iter_)
-        save_model(model=netD, dir=data_config["D_checkpoint_dir"], iter=iter_)
+        return dn
