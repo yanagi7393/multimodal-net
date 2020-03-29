@@ -67,7 +67,12 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
     # Data definitions
     transforms = {
         "frame": torchvision.transforms.Compose(
-            [FrameNormalizer(), torchvision.transforms.RandomVerticalFlip(p=0.5)]
+            [
+                torchvision.transforms.ToPILImage(),
+                torchvision.transforms.RandomVerticalFlip(p=0.5),
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]
         ),
         "mel": MelNormalizer(
             dataloader=mel_data_loader,
