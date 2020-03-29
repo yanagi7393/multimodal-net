@@ -345,11 +345,11 @@ class BlockUpsample2d(nn.Module):
             sn=sn,
         )
 
-        def forward(self, x):
-            x = self.upsample(x)
-            x = self.res_block(x)
+    def forward(self, x):
+        x = self.upsample(x)
+        x = self.res_block(x)
 
-            return x
+        return x
 
 
 class BlockUp2d(nn.Module):
@@ -669,11 +669,11 @@ class BottleneckBlockUpsample2d(nn.Module):
             sn=sn,
         )
 
-        def forward(self, x):
-            x = self.upsample(x)
-            x = self.res_bottleneck_block(x)
+    def forward(self, x):
+        x = self.upsample(x)
+        x = self.res_bottleneck_block(x)
 
-            return x
+        return x
 
 
 class BottleneckBlockUp2d(nn.Module):

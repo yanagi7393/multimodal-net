@@ -203,8 +203,8 @@ class InvertedResUpsample2d(nn.Module):
             sn=sn,
         )
 
-        def forward(self, x):
-            x = self.upsample(x)
-            x = self.inverted_residual_block(x)
+    def forward(self, x):
+        x = self.upsample(x)
+        x = self.inverted_residual_block(x)
 
-            return x
+        return x

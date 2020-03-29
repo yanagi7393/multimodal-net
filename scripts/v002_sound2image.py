@@ -149,7 +149,7 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
 
         for idx, data_dict in enumerate(data_loader):
             data_dict = {key: value.to(device) for key, value in data_dict.items()}
-            mel_data = torch.cat(
+            mel_data = torch.stack(
                 [data_dict["log_mel_spec"], data_dict["mel_if"]], dim=1
             )
 
@@ -214,7 +214,7 @@ def train(data_dir, test_data_dir, batch_size, exp_dir="./experiments", device="
                     ]
                 )
 
-                mel_test_data = torch.cat(
+                mel_test_data = torch.stack(
                     [test_data_dict["log_mel_spec"], test_data_dict["mel_if"]], dim=1
                 )
 

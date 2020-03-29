@@ -43,6 +43,12 @@ class Dataset(Dataset):
             for data_type in self.filename_template.keys()
         }
 
+        # astype -> float32
+        for data_type in self.filename_template.keys():
+            if data_type in ["log_mel_spec", "mel_if"]:
+                data_dict[data_type] = data_dict[data_type].astype("float32")
+
+        # transform
         for data_type, transform in self.transforms.items():
             assert data_type in ["frame", "audio", "mel"]
             if data_type == "mel":

@@ -17,11 +17,11 @@ class SEBlock(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d([1, 1])
         self.fc = nn.Sequential(
             perform_sn(
-                nn.Conv2d(in_channels, in_channels // reduction, 1, bias=False), sn=sn
+                nn.Linear(in_channels, in_channels // reduction, bias=False), sn=sn
             ),
             get_activation_func[activation](),
             perform_sn(
-                nn.Conv2d(in_channels // reduction, in_channels, 1, bias=False), sn=sn
+                nn.Linear(in_channels // reduction, in_channels, bias=False), sn=sn
             ),
             nn.Sigmoid(),
         )

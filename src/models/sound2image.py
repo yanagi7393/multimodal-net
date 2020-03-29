@@ -111,32 +111,32 @@ class Generator(nn.Module):
         self.skip1 = nn.Conv2d(
             in_channels=512,
             out_channels=512,
-            kernel_size=[1, 8],
-            stride=[1, 8],
+            kernel_size=[8, 1],
+            stride=[8, 1],
             padding=[0, 0],
             groups=512,
         )
         self.skip2 = nn.Conv2d(
             in_channels=256,
             out_channels=256,
-            kernel_size=[1, 8],
-            stride=[1, 8],
+            kernel_size=[8, 1],
+            stride=[8, 1],
             padding=[0, 0],
             groups=256,
         )
         self.skip3 = nn.Conv2d(
             in_channels=256,
             out_channels=256,
-            kernel_size=[1, 8],
-            stride=[1, 8],
+            kernel_size=[8, 1],
+            stride=[8, 1],
             padding=[0, 0],
             groups=256,
         )
         self.skip4 = nn.Conv2d(
             in_channels=128,
             out_channels=128,
-            kernel_size=[1, 8],
-            stride=[1, 8],
+            kernel_size=[8, 1],
+            stride=[8, 1],
             padding=[0, 0],
             groups=128,
         )
@@ -216,7 +216,7 @@ class Generator(nn.Module):
             sn=sn,
         )
 
-        self.up_block7 = BlockUpsample2d(
+        self.up_block8 = BlockUpsample2d(
             in_channels=32,
             out_channels=16,
             dropout=0.5,
@@ -242,26 +242,26 @@ class Generator(nn.Module):
         #   BLOCK: Inverted Residual block
         #   ACTIVATION_FUNC: LReLU
         #   NORM: IN
-        # Input Dimention: [B, 2, 128, 1024]
-        # Dimention -> [B, 16, 128, 1024]
+        # Input Dimention: [B, 2, 1024, 128]
+        # Dimention -> [B, 16, 1024, 128]
         dn = self.dn_block1(input)
 
-        # Dimention -> [B, 32, 64, 512]
+        # Dimention -> [B, 32, 512, 64]
         dn = self.dn_block2(dn)
 
-        # Dimention -> [B, 64, 32, 256]
+        # Dimention -> [B, 64, 256, 32]
         dn = self.dn_block3(dn)
 
-        # Dimention -> [B, 128, 16, 128]
-        dn = self.dn_block4(dn)
+        # Dimention -> [B, 128, 128, 16]
+        dn4 = self.dn_block4(dn)
 
-        # Dimention -> [B, 256, 8, 64]
-        dn5 = self.dn_block5(dn)
+        # Dimention -> [B, 256, 64, 8]
+        dn5 = self.dn_block5(dn4)
 
-        # Dimention -> [B, 256, 4, 32]
+        # Dimention -> [B, 256, 32, 4]
         dn6 = self.dn_block6(dn5)
 
-        # Dimention -> [B, 512, 2, 16]
+        # Dimention -> [B, 512, 16, 2]
         dn7 = self.dn_block7(dn6)
 
         # Dimention -> [B, 1024, 1, 1]
@@ -376,7 +376,7 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block6 = InvertedRes2d(
-            in_channels=256,
+            in_channels=128,
             planes=512,
             out_channels=256,
             dropout=0,
