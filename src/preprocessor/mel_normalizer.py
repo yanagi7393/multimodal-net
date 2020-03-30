@@ -11,6 +11,9 @@ class MelNormalizer(object):
 
         # load params
         self._load_params()
+        print(
+            f"Params: s_a:{self.s_a:.4f}, s_b:{self.s_b:.4f}, p_a:{self.p_a:.4f}, p_b:{self.p_b:.4f}"
+        )
 
     def _save_params(self):
         params = {"s_a": self.s_a, "s_b": self.s_b, "p_a": self.p_a, "p_b": self.p_b}
@@ -62,8 +65,8 @@ class MelNormalizer(object):
         self._save_params()
 
     def __call__(self, spec, IF):
-        spec = spec * self.s_a + self.p_a
-        IF = IF * self.s_b + self.p_b
+        spec = spec * self.s_a + self.s_b
+        IF = IF * self.p_a + self.p_b
 
         return spec, IF
 

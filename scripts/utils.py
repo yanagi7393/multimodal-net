@@ -75,9 +75,10 @@ def calc_gp(discriminator, real_images, fake_images, lambda_term=10, device="cpu
         grad_outputs=grad_outputs,
         create_graph=True,
         retain_graph=True,
+        only_inputs=True,
     )[0]
 
-    gradients = gradients.reshape(gradients.size(0), -1)
+    gradients = gradients.view(gradients.size(0), -1)
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * lambda_term
 
     return gradient_penalty

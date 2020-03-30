@@ -134,7 +134,7 @@ class InvertedRes2d(nn.Module):
             self.conv4 = None
 
         # Dropout2d can cover 1d.
-        self.dropout = nn.Dropout2d(dropout)
+        self.dropout = nn.Dropout(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):

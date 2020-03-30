@@ -27,13 +27,16 @@ DATA_CONFIG = {
 
 MODEL_CONFIG = {
     "lr": 0.0001,
-    "beta1": 0,
+    "beta1": 0.5,
     "beta2": 0.99,
     "iters": 100,
     "print_epoch": 100,
     "test_epoch": 500,
-    "save_per": 1,
+    "print_per_iters": 1,
+    "test_per_iters": 1,
+    "save_per_iters": 1,
     "fm_lamba": 0,
+    "gp_lambda": 10,
 }
 
 
@@ -187,6 +190,7 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
                 discriminator=netD,
                 real_images=data_dict["frame"],
                 fake_images=gen_frames.detach(),
+                lambda_term=model_config["gp_lambda"],
                 device=device,
             )
 
@@ -211,60 +215,65 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
 
             optimizer_g.step()
 
-            if idx % model_config["print_epoch"] == 0:
-                print(
-                    f"INFO: D_loss: {d_loss.item():4f} | G_loss: {g_loss.item():4f} | W_D: {wasserstein_D.item():4f}"
-                )
+            if iter_ % model_config["print_per_iters"] == 0:
+                if idx % model_config["print_epoch"] == 0:
+                    print(
+                        f"INFO: D_loss: {d_loss.item():4f} | G_loss: {g_loss.item():4f} | W_D: {wasserstein_D.item():4f}"
+                    )
 
-            if idx % model_config["test_epoch"] == 0:
-                # EVAL MODE
-                netD.eval()
-                netG.eval()
+            if iter_ % model_config["test_per_iters"] == 0:
+                if idx % model_config["test_epoch"] == 0:
+                    # EVAL MODE
+                    netD.eval()
+                    netG.eval()
 
-                try:
-                    test_data_dict = next(test_data_loader_)
-                except StopIteration:
-                    test_data_loader_ = iter(test_data_loader)
-                    test_data_dict = next(test_data_loader_)
+                    try:
+                        test_data_dict = next(test_data_loader_)
+                    except StopIteration:
+                        test_data_loader_ = iter(test_data_loader)
+                        test_data_dict = next(test_data_loader_)
 
-                test_data_dict = dict(
-                    [
-                        (key, value.to(device))
-                        if key in ["log_mel_spec", "mel_if"]
-                        else (key, value.to("cpu"))
-                        for key, value in test_data_dict.items()
-                    ]
-                )
+                    test_data_dict = dict(
+                        [
+                            (key, value.to(device))
+                            if key in ["log_mel_spec", "mel_if"]
+                            else (key, value.to("cpu"))
+                            for key, value in test_data_dict.items()
+                        ]
+                    )
 
-                mel_test_data = torch.stack(
-                    [test_data_dict["log_mel_spec"], test_data_dict["mel_if"]], dim=1
-                )
+                    mel_test_data = torch.stack(
+                        [test_data_dict["log_mel_spec"], test_data_dict["mel_if"]],
+                        dim=1,
+                    )
 
-                with torch.no_grad():
-                    gen_frames = netG(mel_test_data).detach()
+                    with torch.no_grad():
+                        gen_frames = netG(mel_test_data).detach()
 
-                concat_frames = torch.stack(
-                    list(
-                        chain(
-                            *[
-                                (fake_img, real_img)
-                                for fake_img, real_img in zip(
-                                    gen_frames.cpu(), test_data_dict["frame"]
-                                )
-                            ]
-                        )
-                    ),
-                    dim=0,
-                )
-                concat_frames = torchvision.utils.make_grid(
-                    concat_frames, nrow=2, padding=10
-                )
+                    concat_frames = torch.stack(
+                        list(
+                            chain(
+                                *[
+                                    (fake_img, real_img)
+                                    for fake_img, real_img in zip(
+                                        gen_frames.cpu(), test_data_dict["frame"]
+                                    )
+                                ]
+                            )
+                        ),
+                        dim=0,
+                    )
+                    concat_frames = torchvision.utils.make_grid(
+                        concat_frames, nrow=2, padding=10
+                    )
 
-                torchvision.utils.save_image(
-                    concat_frames,
-                    os.path.join(data_config["test_output_dir"], f"{iter_}-{idx}.png"),
-                )
+                    torchvision.utils.save_image(
+                        concat_frames,
+                        os.path.join(
+                            data_config["test_output_dir"], f"{iter_}-{idx}.png"
+                        ),
+                    )
 
-        if iter_ % model_config["save_per"] == 0:
+        if iter_ % model_config["save_per_iters"] == 0:
             save_model(model=netG, dir=data_config["G_checkpoint_dir"], iter=iter_)
             save_model(model=netD, dir=data_config["D_checkpoint_dir"], iter=iter_)

@@ -281,7 +281,7 @@ class BlockDown2d(nn.Module):
             self.conv3 = None
 
         # Dropout2d can cover 2d.
-        self.dropout = nn.Dropout2d(dropout)
+        self.dropout = nn.Dropout(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):
@@ -449,7 +449,7 @@ class BlockUp2d(nn.Module):
             self.deconv3 = None
 
         # Dropout2d can cover 2d.
-        self.dropout = nn.Dropout2d(dropout)
+        self.dropout = nn.Dropout(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):
@@ -599,7 +599,7 @@ class BottleneckBlockDown2d(nn.Module):
             self.conv4 = None
 
         # Dropout2d can cover 2d.
-        self.dropout = nn.Dropout2d(dropout)
+        self.dropout = nn.Dropout(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):
@@ -789,7 +789,7 @@ class BottleneckBlockUp2d(nn.Module):
             self.deconv4 = None
 
         # Dropout2d can cover 2d.
-        self.dropout = nn.Dropout2d(dropout)
+        self.dropout = nn.Dropout(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):
