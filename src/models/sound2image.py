@@ -320,7 +320,7 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block2 = InvertedRes2d(
-            in_channels=8,
+            in_channels=16,
             planes=32,  # 64
             out_channels=32,
             dropout=0,
@@ -332,7 +332,7 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block3 = InvertedRes2d(
-            in_channels=16,
+            in_channels=32,
             planes=64,  # 128
             out_channels=64,
             dropout=0,
@@ -348,7 +348,7 @@ class Discriminator(nn.Module):
             self.sa_layer = SelfAttention2d(in_channels=64, sn=sn)
 
         self.dn_block4 = InvertedRes2d(
-            in_channels=32,
+            in_channels=64,
             planes=128,  # 256
             out_channels=128,
             dropout=0,
@@ -360,7 +360,7 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block5 = InvertedRes2d(
-            in_channels=64,
+            in_channels=128,
             planes=128,  # 256
             out_channels=128,
             dropout=0,
@@ -372,7 +372,7 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block6 = InvertedRes2d(
-            in_channels=64,
+            in_channels=128,
             planes=256,  # 512
             out_channels=256,
             dropout=0,
@@ -384,7 +384,7 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block7 = InvertedRes2d(
-            in_channels=128,
+            in_channels=256,
             planes=256,  # 512
             out_channels=256,
             dropout=0,
