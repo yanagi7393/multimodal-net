@@ -35,8 +35,9 @@ MODEL_CONFIG = {
     "save_iter": 1,
     "print_epoch": 10,
     "test_epoch": 50,
-    "fm_lamba": 0,
+    "fm_lamba": 1,
     "gp_lambda": 10,
+    "rec_lamba": 1,
 }
 
 
@@ -182,7 +183,7 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             feature_real = feature_real.detach()
             D_real = D_real_out.view(-1).mean()
 
-            gen_frames = netG(mel_data)
+            recon_mel, gen_frames = netG(mel_data)
             _, D_fake_out = netD(gen_frames.detach())
             D_fake = D_fake_out.view(-1).mean()
 
@@ -209,8 +210,13 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             feature_fake, DG_fake_out = netD(gen_frames)
             DG_fake = DG_fake_out.view(-1).mean()
             g_loss = (
-                (feature_real - feature_fake).view(-1).mean() * model_config["fm_lamba"]
-            ) - DG_fake
+                (
+                    (feature_real - feature_fake).view(-1).mean()
+                    * model_config["fm_lamba"]
+                )
+                - DG_fake
+                + (((mel_data - recon_mel) ** 2).mean() * model_config["rec_lamba"])
+            )
             g_loss.backward()
 
             optimizer_g.step()
@@ -248,7 +254,8 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
                     )
 
                     with torch.no_grad():
-                        gen_frames = netG(mel_test_data).detach()
+                        _, gen_frames = netG(mel_test_data)
+                        gen_frames = gen_frames.detach()
 
                     concat_frames = torch.stack(
                         list(

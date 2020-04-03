@@ -185,10 +185,11 @@ class InvertedResUpsample2d(nn.Module):
         normalization="bn",
         seblock=False,
         sn=False,
+        scale_factor=2,
     ):
         super().__init__()
 
-        self.upsample = Upsample(scale_factor=2, mode="bilinear")
+        self.upsample = Upsample(scale_factor=scale_factor, mode="bilinear")
 
         self.inverted_residual_block = InvertedRes2d(
             in_channels=in_channels,

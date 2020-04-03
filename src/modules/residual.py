@@ -328,10 +328,11 @@ class BlockUpsample2d(nn.Module):
         normalization="bn",
         seblock=False,
         sn=False,
+        scale_factor=2,
     ):
         super().__init__()
 
-        self.upsample = Upsample(scale_factor=2, mode="bilinear")
+        self.upsample = Upsample(scale_factor=scale_factor, mode="bilinear")
 
         self.res_block = BlockDown2d(
             in_channels=in_channels,
@@ -651,10 +652,11 @@ class BottleneckBlockUpsample2d(nn.Module):
         normalization="bn",
         seblock=False,
         sn=False,
+        scale_factor=2,
     ):
         super().__init__()
 
-        self.upsample = Upsample(scale_factor=2, mode="bilinear")
+        self.upsample = Upsample(scale_factor=scale_factor, mode="bilinear")
 
         self.res_bottleneck_block = BottleneckBlockDown2d(
             in_channels=in_channels,
