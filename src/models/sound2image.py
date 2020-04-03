@@ -215,10 +215,6 @@ class Generator(nn.Module):
             sn=sn,
         )
 
-        # self.last_norm = NORMS[norm](num_channels=16)
-
-        self.last_act = getattr(F, "relu")
-
         self.last_conv = nn.Conv2d(
             in_channels=16,
             out_channels=3,
@@ -296,22 +292,19 @@ class Generator(nn.Module):
         up = self.up_block8(up)
 
         # Dimention -> [B, 3, 256, 256]
-        up = self.last_conv(self.last_act(up))
-
-        # last_tanh
-        up = self.last_tanh(up)
+        up = self.last_tanh(self.last_conv(up))
 
         return up
 
 
 class Discriminator(nn.Module):
-    def __init__(self, self_attention=False, sn=True, norm="BIN"):
+    def __init__(self, self_attention=True, sn=True, norm="IN"):
         super().__init__()
 
         # DOWN:
         self.dn_block1 = FirstBlockDown2d(
             in_channels=3,
-            out_channels=16,
+            out_channels=8,
             activation="leaky_relu",
             normalization=None,
             downscale=False,
@@ -320,9 +313,9 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block2 = InvertedRes2d(
-            in_channels=16,
-            planes=32,  # 64
-            out_channels=32,
+            in_channels=8,
+            planes=16,  # 64
+            out_channels=16,
             dropout=0,
             activation="leaky_relu",
             normalization=norm,
@@ -332,9 +325,9 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block3 = InvertedRes2d(
-            in_channels=32,
-            planes=64,  # 128
-            out_channels=64,
+            in_channels=16,
+            planes=32,  # 128
+            out_channels=32,
             dropout=0,
             activation="leaky_relu",
             normalization=norm,
@@ -345,12 +338,12 @@ class Discriminator(nn.Module):
 
         self.sa_layer = None
         if self_attention is True:
-            self.sa_layer = SelfAttention2d(in_channels=64, sn=sn)
+            self.sa_layer = SelfAttention2d(in_channels=32, sn=sn)
 
         self.dn_block4 = InvertedRes2d(
-            in_channels=64,
-            planes=128,  # 256
-            out_channels=128,
+            in_channels=32,
+            planes=64,  # 256
+            out_channels=64,
             dropout=0,
             activation="leaky_relu",
             normalization=norm,
@@ -360,9 +353,9 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block5 = InvertedRes2d(
-            in_channels=128,
-            planes=128,  # 256
-            out_channels=128,
+            in_channels=64,
+            planes=64,  # 256
+            out_channels=64,
             dropout=0,
             activation="leaky_relu",
             normalization=norm,
@@ -372,6 +365,18 @@ class Discriminator(nn.Module):
         )
 
         self.dn_block6 = InvertedRes2d(
+            in_channels=64,
+            planes=128,  # 512
+            out_channels=128,
+            dropout=0,
+            activation="leaky_relu",
+            normalization=norm,
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
+
+        self.dn_block7 = InvertedRes2d(
             in_channels=128,
             planes=256,  # 512
             out_channels=256,
@@ -382,22 +387,6 @@ class Discriminator(nn.Module):
             seblock=False,
             sn=sn,
         )
-
-        self.dn_block7 = InvertedRes2d(
-            in_channels=256,
-            planes=256,  # 512
-            out_channels=256,
-            dropout=0,
-            activation="leaky_relu",
-            normalization=norm,
-            downscale=True,
-            seblock=False,
-            sn=sn,
-        )
-
-        self.last_norm = NORMS[norm](num_channels=256)
-
-        self.last_act = getattr(F, "leaky_relu")
 
         self.global_avg_pool = nn.AdaptiveAvgPool2d([1, 1])
 
@@ -454,9 +443,6 @@ class Discriminator(nn.Module):
 
         # Dimention -> [B, 128, 4, 4]
         dn = self.dn_block7(dn)
-
-        # Dimention -> [B, 128, 4, 4]
-        dn = self.last_act(self.last_norm(dn))
 
         # Dimention -> [B, 128, 1, 1]
         dn = self.global_avg_pool(dn)

@@ -30,11 +30,11 @@ MODEL_CONFIG = {
     "beta1": 0.5,
     "beta2": 0.99,
     "iters": 100,
-    "print_epoch": 100,
-    "test_epoch": 500,
-    "print_per_iters": 1,
-    "test_per_iters": 1,
-    "save_per_iters": 1,
+    "print_iter": 1,
+    "test_iter": 1,
+    "save_iter": 1,
+    "print_epoch": 10,
+    "test_epoch": 50,
     "fm_lamba": 0,
     "gp_lambda": 10,
 }
@@ -215,13 +215,13 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
 
             optimizer_g.step()
 
-            if iter_ % model_config["print_per_iters"] == 0:
+            if iter_ % model_config["print_iter"] == 0:
                 if idx % model_config["print_epoch"] == 0:
                     print(
                         f"INFO: D_loss: {d_loss.item():4f} | G_loss: {g_loss.item():4f} | W_D: {wasserstein_D.item():4f}"
                     )
 
-            if iter_ % model_config["test_per_iters"] == 0:
+            if iter_ % model_config["test_iter"] == 0:
                 if idx % model_config["test_epoch"] == 0:
                     # EVAL MODE
                     netD.eval()
@@ -274,6 +274,6 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
                         ),
                     )
 
-        if iter_ % model_config["save_per_iters"] == 0:
+        if iter_ % model_config["save_iter"] == 0:
             save_model(model=netG, dir=data_config["G_checkpoint_dir"], iter=iter_)
             save_model(model=netD, dir=data_config["D_checkpoint_dir"], iter=iter_)
