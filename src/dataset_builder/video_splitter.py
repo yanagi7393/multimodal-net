@@ -4,7 +4,6 @@ from pathlib import Path
 from moviepy.editor import VideoFileClip
 from moviepy.video.fx.all import crop
 from .utils import parallelize
-from dataset_builder.utils import load_audio
 import math
 
 DEFUALT = {

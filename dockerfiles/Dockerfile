@@ -7,6 +7,7 @@ RUN apt-get update \
     git-core \
     vim \
     gettext-base \
+    ffmpeg \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 

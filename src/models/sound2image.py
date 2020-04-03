@@ -35,6 +35,10 @@ class Generator(nn.Module):
             sn=sn,
         )
 
+        self.sa_layer1 = None
+        if self_attention is True:
+            self.sa_layer1 = SelfAttention2d(in_channels=32, sn=sn)
+
         self.dn_block3 = InvertedRes2d(
             in_channels=32,
             planes=64,  # 128
@@ -170,9 +174,9 @@ class Generator(nn.Module):
             sn=sn,
         )
 
-        self.sa_layer = None
+        self.sa_layer2 = None
         if self_attention is True:
-            self.sa_layer = SelfAttention2d(in_channels=64, sn=sn)
+            self.sa_layer2 = SelfAttention2d(in_channels=64, sn=sn)
 
         self.up_block6 = BlockUpsample2d(
             in_channels=64,
@@ -205,99 +209,6 @@ class Generator(nn.Module):
 
         self.last_tanh = nn.Tanh()
 
-        #########################
-        # RECONSTRUCTION LAYERS #
-        #########################
-        self.global_avg_up_pool = Upsample(scale_factor=[8, 1], mode="bilinear")
-
-        self.rec_block1 = BlockUpsample2d(
-            in_channels=512,
-            out_channels=256,
-            dropout=0,
-            activation="relu",
-            normalization=norm,
-            seblock=False,
-            sn=sn,
-        )
-
-        self.rec_block2 = BlockUpsample2d(
-            in_channels=256,
-            out_channels=128,
-            dropout=0,
-            activation="relu",
-            normalization=norm,
-            seblock=False,
-            sn=sn,
-        )
-
-        self.rec_block3 = BlockUpsample2d(
-            in_channels=128,
-            out_channels=64,
-            dropout=0,
-            activation="relu",
-            normalization=norm,
-            seblock=False,
-            sn=sn,
-        )
-
-        self.rec_block4 = BlockUpsample2d(
-            in_channels=64,
-            out_channels=32,
-            dropout=0,
-            activation="relu",
-            normalization=norm,
-            seblock=False,
-            sn=sn,
-        )
-
-        self.rec_block5 = BlockUpsample2d(
-            in_channels=32,
-            out_channels=16,
-            dropout=0,
-            activation="relu",
-            normalization=norm,
-            seblock=False,
-            sn=sn,
-        )
-
-        self.last_rec_up = Upsample(scale_factor=2, mode="bilinear")
-
-        self.last_rec_conv = nn.Conv2d(
-            in_channels=16,
-            out_channels=2,
-            kernel_size=1,
-            bias=False,
-            padding=0,
-            stride=1,
-        )
-
-    def reconstruct(self, input):
-        # DOWN:
-        #   BLOCK: Inverted Residual block
-        #   ACTIVATION_FUNC: LReLU
-        #   NORM: IN
-        # Input Dimention: [B, 2, 1024, 128]
-        # Dimention -> [B, 16, 512, 64]
-        dn = self.dn_block1(input)
-
-        # Dimention -> [B, 32, 256, 32]
-        dn = self.dn_block2(dn)
-
-        # Dimention -> [B, 64, 128, 16]
-        dn3 = self.dn_block3(dn)
-
-        # Dimention -> [B, 128, 64, 8]
-        dn4 = self.dn_block4(dn3)
-
-        # Dimention -> [B, 256, 32, 4]
-        dn5 = self.dn_block5(dn4)
-
-        # Dimention -> [B, 512, 16, 2]
-        dn6 = self.dn_block6(dn5)
-
-        # Dimention -> [B, 512, 2, 2]
-        latent_vec = self.global_avg_pool(dn6)
-
     def forward(self, input):
         # DOWN:
         #   BLOCK: Inverted Residual block
@@ -309,6 +220,9 @@ class Generator(nn.Module):
 
         # Dimention -> [B, 32, 256, 32]
         dn = self.dn_block2(dn)
+
+        if self.sa_layer1 is not None:
+            dn = self.sa_layer1(dn)
 
         # Dimention -> [B, 64, 128, 16]
         dn3 = self.dn_block3(dn)
@@ -351,8 +265,8 @@ class Generator(nn.Module):
         # Dimention -> [B, 64, 64, 64]
         up = self.up_block5(up)
 
-        if self.sa_layer is not None:
-            up = self.sa_layer(up)
+        if self.sa_layer2 is not None:
+            up = self.sa_layer2(up)
 
         # Dimention -> [B, 32, 128, 128]
         up = self.up_block6(up)
@@ -363,31 +277,7 @@ class Generator(nn.Module):
         # Dimention -> [B, 3, 256, 256]
         up = self.last_tanh(self.last_conv(up))
 
-        ########################
-        # RECONSTRUCTION FLOWS #
-        ########################
-        # Dimention -> [B, 512, 16, 2]
-        up_pooled = self.global_avg_up_pool(latent_vec)
-
-        # Dimention -> [B, 256, 32, 4]
-        rec1 = self.rec_block1(up_pooled)
-
-        # Dimention -> [B, 128, 64, 8]
-        rec2 = self.rec_block2(rec1)
-
-        # Dimention -> [B, 64, 128, 16]
-        rec3 = self.rec_block3(rec2)
-
-        # Dimention -> [B, 32, 256, 32]
-        rec4 = self.rec_block4(rec3)
-
-        # Dimention -> [B, 16, 512, 64]
-        rec5 = self.rec_block5(rec4)
-
-        # Dimention -> [B, 2, 1024, 128]
-        reconstructed = self.last_rec_conv(self.last_rec_up(rec5))
-
-        return reconstructed, up
+        return up
 
 
 class Discriminator(nn.Module):
@@ -447,19 +337,7 @@ class Discriminator(nn.Module):
 
         self.dn_block5 = InvertedRes2d(
             in_channels=64,
-            planes=64,  # 256
-            out_channels=64,
-            dropout=0,
-            activation="leaky_relu",
-            normalization=norm,
-            downscale=True,
-            seblock=False,
-            sn=sn,
-        )
-
-        self.dn_block6 = InvertedRes2d(
-            in_channels=64,
-            planes=128,  # 512
+            planes=128,  # 256
             out_channels=128,
             dropout=0,
             activation="leaky_relu",
@@ -469,10 +347,22 @@ class Discriminator(nn.Module):
             sn=sn,
         )
 
-        self.dn_block7 = InvertedRes2d(
+        self.dn_block6 = InvertedRes2d(
             in_channels=128,
             planes=256,  # 512
             out_channels=256,
+            dropout=0,
+            activation="leaky_relu",
+            normalization=norm,
+            downscale=True,
+            seblock=False,
+            sn=sn,
+        )
+
+        self.dn_block7 = InvertedRes2d(
+            in_channels=256,
+            planes=512,  # 512
+            out_channels=512,
             dropout=0,
             activation="leaky_relu",
             normalization=norm,
@@ -486,7 +376,7 @@ class Discriminator(nn.Module):
         if sn is True:
             self.output = nn.utils.spectral_norm(
                 nn.Conv2d(
-                    in_channels=256,
+                    in_channels=512,
                     out_channels=1,
                     kernel_size=1,
                     bias=False,
@@ -496,7 +386,7 @@ class Discriminator(nn.Module):
             )
         else:
             self.output = nn.Conv2d(
-                in_channels=256,
+                in_channels=512,
                 out_channels=1,
                 kernel_size=1,
                 bias=False,
@@ -528,16 +418,16 @@ class Discriminator(nn.Module):
         # Dimention -> [B, 64, 32, 32]
         dn = self.dn_block4(dn)
 
-        # Dimention -> [B, 64, 16, 16]
+        # Dimention -> [B, 128, 16, 16]
         dn = self.dn_block5(dn)
 
-        # Dimention -> [B, 128, 8, 8]
+        # Dimention -> [B, 256, 8, 8]
         dn = self.dn_block6(dn)
 
-        # Dimention -> [B, 128, 4, 4]
+        # Dimention -> [B, 512, 4, 4]
         dn = self.dn_block7(dn)
 
-        # Dimention -> [B, 128, 1, 1]
+        # Dimention -> [B, 512, 1, 1]
         dn = self.global_avg_pool(dn)
 
         # Dimention -> [B, 1, 1, 1]

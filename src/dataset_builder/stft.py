@@ -13,6 +13,7 @@ def transform_stft(
     device="cpu",
     input_tensor=False,
     output_tensor=False,
+    stft=None,
 ):
     # hop_length is overlap length of window. Generally it use win_length//4
     filter_length = win_length
@@ -24,12 +25,13 @@ def transform_stft(
     audio_cat = torch.cat(audio_list, dim=0)
     audio_cat = audio_cat.to(device)
 
-    stft = STFT(
-        filter_length=filter_length,
-        hop_length=hop_length,
-        win_length=win_length,
-        window=window,
-    ).to(device)
+    if stft is None:
+        stft = STFT(
+            filter_length=filter_length,
+            hop_length=hop_length,
+            win_length=win_length,
+            window=window,
+        ).to(device)
 
     magnitudes, phases = stft.transform(audio_cat)
     magnitudes = torch.split(magnitudes, split_size_or_sections=1, dim=0)
@@ -53,6 +55,7 @@ def inverse_stft(
     device="cpu",
     input_tensor=False,
     output_tensor=False,
+    stft=None,
 ):
     # hop_length is overlap length of window. Generally it use win_length//4
     filter_length = win_length
@@ -64,12 +67,13 @@ def inverse_stft(
     magnitude_cat = torch.cat(magnitude_list, dim=0)
     phase_cat = torch.cat(phase_list, dim=0)
 
-    stft = STFT(
-        filter_length=filter_length,
-        hop_length=hop_length,
-        win_length=win_length,
-        window=window,
-    ).to(device)
+    if stft is None:
+        stft = STFT(
+            filter_length=filter_length,
+            hop_length=hop_length,
+            win_length=win_length,
+            window=window,
+        ).to(device)
 
     reconstructed_audio = stft.inverse(magnitude_cat, phase_cat)
     reconstructed_audio = torch.split(

@@ -8,6 +8,9 @@ from torch.utils.data import DataLoader
 from dataset_builder.utils import parallelize
 from datasets.dataset import FILENAME_TEMPLATE
 from dataset_builder.video_splitter import VideoSplitter
+import fire
+from torch_stft import STFT
+from glob import glob
 
 
 DEFAULT_CONFIG = {
@@ -58,8 +61,14 @@ def stft_to_mel(magnitude, phase):
 
 
 def video_to_datasets(
-    video_path_list, offsets=[10], save_dir="./dataset", device="cpu"
+    video_path_dir,
+    file_filter="*",
+    offsets=[10],
+    save_dir="./dataset",
+    device="cpu",
+    start_index=0,
 ):
+    video_path_list = glob(os.path.join(video_path_dir, file_filter))
     dirs = {
         data_type: os.path.join(save_dir, data_type)
         for data_type in FILENAME_TEMPLATE.keys()
@@ -68,9 +77,17 @@ def video_to_datasets(
     for _, dir in dirs.items():
         os.makedirs(dir, exist_ok=True)
 
-    i = 0
+    i = start_index
     mutate_end_time = True
     raw_data = RawDataset(video_path_list=video_path_list, transforms={})
+
+    # build stft
+    stft = STFT(
+        filter_length=DEFAULT_CONFIG["win_length"],
+        hop_length=DEFAULT_CONFIG["hop_length"],
+        win_length=DEFAULT_CONFIG["win_length"],
+        window=DEFAULT_CONFIG["window"],
+    ).to(device)
 
     for offset_idx, offset in enumerate(sorted(offsets, reverse=True)):
         if offset_idx >= 1:
@@ -99,6 +116,7 @@ def video_to_datasets(
                 device=device,
                 input_tensor=True,
                 output_tensor=False,
+                stft=stft,
             )
 
             stft_to_mel_params = [
@@ -138,3 +156,7 @@ def video_to_datasets(
             parallelize(func=save_files, params=params, n_jobs=DEFAULT_CONFIG["n_jobs"])
 
             i += len(frame_list)
+
+
+if __name__ == "__main__":
+    fire.Fire(video_to_datasets)

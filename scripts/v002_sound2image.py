@@ -14,6 +14,7 @@ from models.sound2image import Generator, Discriminator
 from copy import copy
 import os
 from itertools import chain
+import fire
 
 
 DATA_CONFIG = {
@@ -26,6 +27,7 @@ DATA_CONFIG = {
 }
 
 MODEL_CONFIG = {
+    "batch_size": 64,
     "lr": 0.0001,
     "beta1": 0.5,
     "beta2": 0.99,
@@ -35,9 +37,10 @@ MODEL_CONFIG = {
     "save_iter": 1,
     "print_epoch": 10,
     "test_epoch": 50,
-    "fm_lamba": 1,
+    "fm_lamba": 10,
     "gp_lambda": 10,
-    "rec_lamba": 1,
+    "g_norm": "BIN",
+    "d_norm": "IN",
 }
 
 
@@ -45,6 +48,9 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
     # refine path with exp_dir
     data_config = copy(DATA_CONFIG)
     model_config = copy(MODEL_CONFIG)
+    if not set(config.keys()).issubset(set(model_config.keys())):
+        raise ValueError(f"{set(config.keys()) - set(model_config.keys())}")
+
     model_config = {**model_config, **config}
 
     for key in [
@@ -78,7 +84,7 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
         "frame": torchvision.transforms.Compose(
             [
                 torchvision.transforms.ToPILImage(),
-                torchvision.transforms.RandomVerticalFlip(p=0.5),
+                torchvision.transforms.RandomHorizontalFlip(p=0.5),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ]
@@ -117,8 +123,8 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
     test_data_loader_ = iter(test_data_loader)
 
     # model definition
-    netG = Generator()
-    netD = Discriminator()
+    netG = Generator(norm=model_config["g_norm"])
+    netD = Discriminator(norm=model_config["d_norm"])
 
     # weight initialize
     netG.apply(weights_init)
@@ -183,7 +189,7 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             feature_real = feature_real.detach()
             D_real = D_real_out.view(-1).mean()
 
-            recon_mel, gen_frames = netG(mel_data)
+            gen_frames = netG(mel_data)
             _, D_fake_out = netD(gen_frames.detach())
             D_fake = D_fake_out.view(-1).mean()
 
@@ -210,13 +216,9 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             feature_fake, DG_fake_out = netD(gen_frames)
             DG_fake = DG_fake_out.view(-1).mean()
             g_loss = (
-                (
-                    (feature_real - feature_fake).view(-1).mean()
-                    * model_config["fm_lamba"]
-                )
-                - DG_fake
-                + (((mel_data - recon_mel) ** 2).mean() * model_config["rec_lamba"])
-            )
+                (feature_real - feature_fake).view(-1).abs().mean()
+                * model_config["fm_lamba"]
+            ) - DG_fake
             g_loss.backward()
 
             optimizer_g.step()
@@ -254,8 +256,7 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
                     )
 
                     with torch.no_grad():
-                        _, gen_frames = netG(mel_test_data)
-                        gen_frames = gen_frames.detach()
+                        gen_frames = netG(mel_test_data).detach()
 
                     concat_frames = torch.stack(
                         list(
@@ -284,3 +285,7 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
         if iter_ % model_config["save_iter"] == 0:
             save_model(model=netG, dir=data_config["G_checkpoint_dir"], iter=iter_)
             save_model(model=netD, dir=data_config["D_checkpoint_dir"], iter=iter_)
+
+
+if __name__ == "__main__":
+    fire.Fire(train)
