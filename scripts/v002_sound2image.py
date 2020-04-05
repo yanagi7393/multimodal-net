@@ -38,7 +38,7 @@ MODEL_CONFIG = {
     "print_epoch": 10,
     "test_epoch": 500,
     "recon_lambda": 10,
-    "fm_lambda": 10,
+    "fm_lambda": 0.01,
     "gp_lambda": 10,
     "g_norm": "BIN",
     "d_norm": "BIN",
@@ -112,12 +112,6 @@ def train(
             dataloader=mel_data_loader,
             savefile_path=data_config["mel_normalizer_savefile"],
         ),
-    }
-
-    inverse_transforms = {
-        "frame": torchvision.transforms.Normalize(
-            mean=[-1, -1, -1], std=[1 / 0.5, 1 / 0.5, 1 / 0.5]
-        )
     }
 
     # Define train_data loader
@@ -258,7 +252,8 @@ def train(
             if iter_ % model_config["print_iter"] == 0:
                 if idx % model_config["print_epoch"] == 0:
                     print(
-                        f"INFO: D_loss: {d_loss.item():.2f} | G_loss: {g_loss.item():.2f} | W_D: {wasserstein_D.item():.2f} | REC: {recon_loss.item():.2f} | FM: {fm_loss.item():.2f}"
+                        f"""INFO: D_loss: {d_loss.item():.2f} | G_loss: {g_loss.item():.2f}
+      W_D: {wasserstein_D.item():.2f} | REC: {recon_loss.item():.2f} | FM: {fm_loss.item():.2f}"""
                     )
 
             if iter_ % model_config["test_iter"] == 0:
@@ -303,16 +298,16 @@ def train(
                         ),
                         dim=0,
                     )
-                    concat_frames = inverse_transforms["frame"](concat_frames)
-                    concat_frames = torchvision.utils.make_grid(
-                        concat_frames, nrow=2, padding=10
-                    )
 
                     torchvision.utils.save_image(
                         concat_frames,
                         os.path.join(
                             data_config["test_output_dir"], f"{iter_}-{idx}.png"
                         ),
+                        nrow=2,
+                        padding=10,
+                        range=(-1.0, 1.0),
+                        normalize=True,
                     )
 
         if iter_ % model_config["save_iter"] == 0:
