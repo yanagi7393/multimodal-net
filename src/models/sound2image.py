@@ -5,7 +5,7 @@ from modules.inverted_residual import InvertedRes2d
 from modules.residual import FirstBlockDown2d, BlockUpsample2d
 from modules.upsample import Upsample
 from modules.self_attention import SelfAttention2d
-from modules.norms import NORMS
+from modules.norms import NORMS, perform_sn
 
 
 class Generator(nn.Module):
@@ -198,13 +198,22 @@ class Generator(nn.Module):
             sn=sn,
         )
 
-        self.last_conv = nn.Conv2d(
-            in_channels=16,
-            out_channels=3,
-            kernel_size=1,
-            bias=False,
-            padding=0,
-            stride=1,
+        self.last_norm = None
+        if norm is not None:
+            self.last_norm = NORMS[norm](num_channels=16)
+
+        self.last_act = getattr(F, "relu")
+
+        self.last_conv = perform_sn(
+            nn.Conv2d(
+                in_channels=16,
+                out_channels=3,
+                kernel_size=1,
+                bias=False,
+                padding=0,
+                stride=1,
+            ),
+            sn=sn,
         )
 
         self.last_tanh = nn.Tanh()
@@ -273,6 +282,12 @@ class Generator(nn.Module):
 
         # Dimention -> [B, 16, 256, 256]
         up = self.up_block7(up)
+
+        # last norm
+        if self.last_norm is not None:
+            up = self.last_norm(up)
+
+        up = self.last_act(up)
 
         # Dimention -> [B, 3, 256, 256]
         up = self.last_tanh(self.last_conv(up))
@@ -371,28 +386,25 @@ class Discriminator(nn.Module):
             sn=sn,
         )
 
+        self.last_norm = None
+        if norm is not None:
+            self.last_norm = NORMS[norm](num_channels=512)
+
+        self.last_act = getattr(F, "leaky_relu")
+
         self.global_avg_pool = nn.AdaptiveAvgPool2d([1, 1])
 
-        if sn is True:
-            self.output = nn.utils.spectral_norm(
-                nn.Conv2d(
-                    in_channels=512,
-                    out_channels=1,
-                    kernel_size=1,
-                    bias=False,
-                    padding=0,
-                    stride=1,
-                )
-            )
-        else:
-            self.output = nn.Conv2d(
+        self.output = perform_sn(
+            nn.Conv2d(
                 in_channels=512,
                 out_channels=1,
                 kernel_size=1,
                 bias=False,
                 padding=0,
                 stride=1,
-            )
+            ),
+            sn=sn,
+        )
 
     def forward(self, input):
         # DOWN:
@@ -424,8 +436,12 @@ class Discriminator(nn.Module):
         # Dimention -> [B, 512, 4, 4]
         dn = self.dn_block7(dn)
 
+        # last norm
+        if self.last_norm is not None:
+            dn = self.last_norm(dn)
+
         # Dimention -> [B, 512, 1, 1]
-        dn = self.global_avg_pool(dn)
+        dn = self.global_avg_pool(self.last_act(dn))
 
         # Get feature vector
         feature_vec = dn

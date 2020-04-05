@@ -38,10 +38,13 @@ MODEL_CONFIG = {
     "print_epoch": 10,
     "test_epoch": 500,
     "recon_lambda": 10,
-    "fm_lambda": 0.01,
+    "fm_lambda": 0.1,
     "gp_lambda": 10,
     "g_norm": "BIN",
-    "d_norm": "BIN",
+    "d_norm": None,
+    "g_sn": True,
+    "d_sn": True,
+    "loss_type": "hinge",
 }
 
 
@@ -60,6 +63,126 @@ def _mutate_config_path(data_config, exp_dir):
             os.makedirs(data_config[key], exist_ok=True)
 
     return data_config
+
+
+def step_loss(
+    g_optim, d_optim, netG, netD, mel_data, frame_data, model_config, device="cuda"
+):
+    # SET TRAIN MODE
+    netD.train()
+    netG.train()
+
+    if model_config["loss_type"] == "wgan":
+        #################
+        # Discriminator #
+        #################
+        netD.zero_grad()
+        netG.zero_grad()
+
+        feature_real, D_real_out = netD(frame_data)
+        feature_real = feature_real.detach()
+        D_real = D_real_out.view(-1).mean()
+
+        gen_frames = netG(mel_data)
+        gen_frames_detached = gen_frames.detach()
+        _, D_fake_out = netD(gen_frames_detached)
+        D_fake = D_fake_out.view(-1).mean()
+
+        gp = calc_gp(
+            discriminator=netD,
+            real_images=frame_data,
+            fake_images=gen_frames_detached,
+            lambda_term=model_config["gp_lambda"],
+            device=device,
+        )
+
+        # set loss
+        d_loss = D_fake - D_real + gp
+        d_loss.backward()
+        d_optim.step()
+
+        #############
+        # Generator #
+        #############
+        netD.zero_grad()
+        netG.zero_grad()
+
+        feature_fake, DG_fake_out = netD(gen_frames)
+        DG_fake = -DG_fake_out.view(-1).mean()
+
+        # set loss
+        recon_loss = (frame_data - gen_frames).view(-1).abs().mean() * model_config[
+            "recon_lambda"
+        ]
+        fm_loss = ((feature_real - feature_fake) ** 2).view(-1).mean() * model_config[
+            "fm_lambda"
+        ]
+        g_loss = recon_loss + fm_loss + DG_fake
+        g_loss.backward()
+        g_optim.step()
+
+        losses = {
+            "D": {"main": d_loss.item()},
+            "G": {
+                "main": g_loss.item(),
+                "fm": fm_loss.item(),
+                "recon": recon_loss.item(),
+            },
+        }
+
+    elif model_config["loss_type"] == "hinge":
+        #################
+        # Discriminator #
+        #################
+        netD.zero_grad()
+        netG.zero_grad()
+
+        feature_real, D_real_out = netD(frame_data)
+        feature_real = feature_real.detach()
+        D_real = torch.nn.ReLU()(1.0 - D_real_out).view(-1).mean()
+
+        gen_frames = netG(mel_data)
+        gen_frames_detached = gen_frames.detach()
+        _, D_fake_out = netD(gen_frames_detached)
+        D_fake = torch.nn.ReLU()(1.0 + D_fake_out).view(-1).mean()
+
+        d_loss = D_real + D_fake
+        d_loss.backward()
+        d_optim.step()
+
+        #############
+        # Generator #
+        #############
+        netD.zero_grad()
+        netG.zero_grad()
+
+        feature_fake, DG_fake_out = netD(gen_frames)
+        DG_fake = -DG_fake_out.view(-1).mean()
+
+        # set loss
+        recon_loss = (frame_data - gen_frames).view(-1).abs().mean() * model_config[
+            "recon_lambda"
+        ]
+        fm_loss = ((feature_real - feature_fake) ** 2).view(-1).mean() * model_config[
+            "fm_lambda"
+        ]
+        g_loss = recon_loss + fm_loss + DG_fake
+        g_loss.backward()
+        g_optim.step()
+
+        losses = {
+            "D": {"main": d_loss.item()},
+            "G": {
+                "main": g_loss.item(),
+                "fm": fm_loss.item(),
+                "recon": recon_loss.item(),
+            },
+        }
+
+    else:
+        raise NotImplementedError
+
+    return losses
 
 
 def train(
@@ -142,8 +265,8 @@ def train(
     test_data_loader_ = iter(test_data_loader)
 
     # model definition
-    netG = Generator(norm=model_config["g_norm"])
-    netD = Discriminator(norm=model_config["d_norm"])
+    netG = Generator(sn=model_config["g_sn"], norm=model_config["g_norm"])
+    netD = Discriminator(sn=model_config["d_sn"], norm=model_config["d_norm"])
 
     # weight initialize
     netG.apply(weights_init)
@@ -194,66 +317,28 @@ def train(
                 [data_dict["log_mel_spec"], data_dict["mel_if"]], dim=1
             )
 
-            # TRAIN MODE
-            netD.train()
-            netG.train()
-
             ############
-            # Update D #
+            # OPTIMIZE #
             ############
-            netD.zero_grad()
-            netG.zero_grad()
-
-            feature_real, D_real_out = netD(data_dict["frame"])
-            feature_real = feature_real.detach()
-            D_real = D_real_out.view(-1).mean()
-
-            gen_frames = netG(mel_data)
-            gen_frames_detached = gen_frames.detach()
-            _, D_fake_out = netD(gen_frames_detached)
-            D_fake = D_fake_out.view(-1).mean()
-
-            gp = calc_gp(
-                discriminator=netD,
-                real_images=data_dict["frame"],
-                fake_images=gen_frames_detached,
-                lambda_term=model_config["gp_lambda"],
+            losses = step_loss(
+                g_optim=optimizer_g,
+                d_optim=optimizer_d,
+                netG=netG,
+                netD=netD,
+                mel_data=mel_data,
+                frame_data=data_dict["frame"],
+                model_config=model_config,
                 device=device,
             )
 
-            # set loss
-            wasserstein_D = D_real - D_fake
-            d_loss = D_fake - D_real + gp
-            d_loss.backward()
-
-            optimizer_d.step()
-
-            ############
-            # Update G #
-            ############
-            netD.zero_grad()
-            netG.zero_grad()
-
-            feature_fake, DG_fake_out = netD(gen_frames)
-            DG_fake = DG_fake_out.view(-1).mean()
-
-            # set loss
-            recon_loss = (data_dict["frame"] - gen_frames).view(
-                -1
-            ).abs().mean() * model_config["recon_lambda"]
-            fm_loss = ((feature_real - feature_fake) ** 2).view(
-                -1
-            ).mean() * model_config["fm_lambda"]
-            g_loss = recon_loss + fm_loss - DG_fake
-            g_loss.backward()
-
-            optimizer_g.step()
-
+            ########
+            # TEST #
+            ########
             if iter_ % model_config["print_iter"] == 0:
                 if idx % model_config["print_epoch"] == 0:
                     print(
-                        f"""INFO: D_loss: {d_loss.item():.2f} | G_loss: {g_loss.item():.2f}
-      W_D: {wasserstein_D.item():.2f} | REC: {recon_loss.item():.2f} | FM: {fm_loss.item():.2f}"""
+                        f"""INFO: D_loss: {losses['D']['main']:.2f} | G_loss: {losses['G']['main']:.2f}
+      REC: {losses['G']['recon']:.2f} | FM: {losses['G']['fm']:.2f}"""
                     )
 
             if iter_ % model_config["test_iter"] == 0:
