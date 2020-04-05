@@ -44,6 +44,7 @@ MODEL_CONFIG = {
     "d_norm": None,
     "g_sn": True,
     "d_sn": True,
+    "dropout": 0,
     "loss_type": "hinge",
 }
 
@@ -265,7 +266,11 @@ def train(
     test_data_loader_ = iter(test_data_loader)
 
     # model definition
-    netG = Generator(sn=model_config["g_sn"], norm=model_config["g_norm"])
+    netG = Generator(
+        sn=model_config["g_sn"],
+        norm=model_config["g_norm"],
+        dropout=model_config["dropout"],
+    )
     netD = Discriminator(sn=model_config["d_sn"], norm=model_config["d_norm"])
 
     # weight initialize

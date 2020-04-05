@@ -28,6 +28,7 @@ class InvertedRes2d(nn.Module):
         downscale=False,
         seblock=False,
         sn=False,
+        bias=False,
     ):
         super().__init__()
         if planes < in_channels:
@@ -48,7 +49,7 @@ class InvertedRes2d(nn.Module):
                 in_channels=in_channels,
                 out_channels=planes,
                 kernel_size=1,
-                bias=False,
+                bias=bias,
                 padding=0,
                 stride=1,
             ),
@@ -63,7 +64,7 @@ class InvertedRes2d(nn.Module):
                 out_channels=planes,
                 kernel_size=3,
                 dilation=dilation,
-                bias=False,
+                bias=bias,
                 padding=1,
                 stride=stride,
                 groups=planes,
@@ -78,7 +79,7 @@ class InvertedRes2d(nn.Module):
                 in_channels=planes,
                 out_channels=out_channels,
                 kernel_size=1,
-                bias=False,
+                bias=bias,
                 padding=0,
                 stride=1,
             ),
@@ -98,7 +99,7 @@ class InvertedRes2d(nn.Module):
                         in_channels=in_channels,
                         out_channels=out_channels,
                         kernel_size=3,
-                        bias=False,
+                        bias=bias,
                         padding=1,
                         stride=stride,
                         groups=in_channels,
@@ -111,7 +112,7 @@ class InvertedRes2d(nn.Module):
                         in_channels=in_channels,
                         out_channels=out_channels,
                         kernel_size=3,
-                        bias=False,
+                        bias=bias,
                         padding=1,
                         stride=stride,
                     ),
@@ -124,7 +125,7 @@ class InvertedRes2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=1,
-                    bias=False,
+                    bias=bias,
                     padding=0,
                     stride=1,
                 ),
@@ -134,7 +135,7 @@ class InvertedRes2d(nn.Module):
             self.conv4 = None
 
         # Dropout2d can cover 1d.
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout2d(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):
@@ -186,6 +187,7 @@ class InvertedResUpsample2d(nn.Module):
         seblock=False,
         sn=False,
         scale_factor=2,
+        bias=False,
     ):
         super().__init__()
 
@@ -202,6 +204,7 @@ class InvertedResUpsample2d(nn.Module):
             downscale=False,
             seblock=seblock,
             sn=sn,
+            bias=bias,
         )
 
     def forward(self, x):

@@ -32,6 +32,7 @@ class FirstBlockDown2d(nn.Module):
         init_channels=None,
         init_normalization=None,
         sn=False,
+        bias=False,
     ):
         super().__init__()
 
@@ -49,7 +50,7 @@ class FirstBlockDown2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=init_channels,
                     kernel_size=1,
-                    bias=False,
+                    bias=bias,
                     padding=0,
                     stride=1,
                 ),
@@ -67,7 +68,7 @@ class FirstBlockDown2d(nn.Module):
                 out_channels=out_channels,
                 kernel_size=3,
                 dilation=dilation,
-                bias=False,
+                bias=bias,
                 padding=1,
                 stride=stride,
             ),
@@ -82,7 +83,7 @@ class FirstBlockDown2d(nn.Module):
                 out_channels=out_channels,
                 kernel_size=3,
                 dilation=dilation,
-                bias=False,
+                bias=bias,
                 padding=1,
                 stride=1,
             ),
@@ -102,7 +103,7 @@ class FirstBlockDown2d(nn.Module):
                         in_channels=in_channels,
                         out_channels=out_channels,
                         kernel_size=3,
-                        bias=False,
+                        bias=bias,
                         padding=1,
                         stride=stride,
                         groups=in_channels,
@@ -116,7 +117,7 @@ class FirstBlockDown2d(nn.Module):
                         in_channels=in_channels,
                         out_channels=out_channels,
                         kernel_size=3,
-                        bias=False,
+                        bias=bias,
                         padding=1,
                         stride=stride,
                     ),
@@ -129,7 +130,7 @@ class FirstBlockDown2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=1,
-                    bias=False,
+                    bias=bias,
                     padding=0,
                     stride=1,
                 ),
@@ -191,6 +192,7 @@ class BlockDown2d(nn.Module):
         downscale=False,
         seblock=False,
         sn=False,
+        bias=False,
     ):
         super().__init__()
 
@@ -208,7 +210,7 @@ class BlockDown2d(nn.Module):
                 out_channels=out_channels,
                 kernel_size=3,
                 dilation=dilation,
-                bias=False,
+                bias=bias,
                 padding=1,
                 stride=stride,
             ),
@@ -223,7 +225,7 @@ class BlockDown2d(nn.Module):
                 out_channels=out_channels,
                 kernel_size=3,
                 dilation=dilation,
-                bias=False,
+                bias=bias,
                 padding=1,
                 stride=1,
             ),
@@ -243,7 +245,7 @@ class BlockDown2d(nn.Module):
                         in_channels=in_channels,
                         out_channels=out_channels,
                         kernel_size=3,
-                        bias=False,
+                        bias=bias,
                         padding=1,
                         stride=stride,
                         groups=in_channels,
@@ -257,7 +259,7 @@ class BlockDown2d(nn.Module):
                         in_channels=in_channels,
                         out_channels=out_channels,
                         kernel_size=3,
-                        bias=False,
+                        bias=bias,
                         padding=1,
                         stride=stride,
                     ),
@@ -270,7 +272,7 @@ class BlockDown2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=1,
-                    bias=False,
+                    bias=bias,
                     padding=0,
                     stride=1,
                 ),
@@ -281,7 +283,7 @@ class BlockDown2d(nn.Module):
             self.conv3 = None
 
         # Dropout2d can cover 2d.
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout2d(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):
@@ -329,6 +331,7 @@ class BlockUpsample2d(nn.Module):
         seblock=False,
         sn=False,
         scale_factor=2,
+        bias=False,
     ):
         super().__init__()
 
@@ -344,6 +347,7 @@ class BlockUpsample2d(nn.Module):
             downscale=False,
             seblock=seblock,
             sn=sn,
+            bias=bias,
         )
 
     def forward(self, x):
@@ -375,6 +379,7 @@ class BlockUp2d(nn.Module):
         upscale=False,
         seblock=False,
         sn=False,
+        bias=False,
     ):
         super().__init__()
 
@@ -391,7 +396,7 @@ class BlockUp2d(nn.Module):
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=3,
-                bias=False,
+                bias=bias,
                 padding=1,
                 stride=stride,
                 output_padding=int(stride > 1),
@@ -406,7 +411,7 @@ class BlockUp2d(nn.Module):
                 in_channels=out_channels,
                 out_channels=out_channels,
                 kernel_size=3,
-                bias=False,
+                bias=bias,
                 padding=1,
                 stride=1,
             ),
@@ -425,7 +430,7 @@ class BlockUp2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=3,
-                    bias=False,
+                    bias=bias,
                     padding=1,
                     stride=stride,
                     output_padding=int(stride > 1),
@@ -439,7 +444,7 @@ class BlockUp2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=1,
-                    bias=False,
+                    bias=bias,
                     padding=0,
                     stride=1,
                 ),
@@ -450,7 +455,7 @@ class BlockUp2d(nn.Module):
             self.deconv3 = None
 
         # Dropout2d can cover 2d.
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout2d(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):
@@ -499,6 +504,7 @@ class BottleneckBlockDown2d(nn.Module):
         downscale=False,
         seblock=False,
         sn=False,
+        bias=False,
     ):
         super().__init__()
 
@@ -515,7 +521,7 @@ class BottleneckBlockDown2d(nn.Module):
                 in_channels=in_channels,
                 out_channels=planes,
                 kernel_size=1,
-                bias=False,
+                bias=bias,
                 padding=0,
                 stride=1,
             ),
@@ -530,7 +536,7 @@ class BottleneckBlockDown2d(nn.Module):
                 out_channels=planes,
                 kernel_size=3,
                 dilation=dilation,
-                bias=False,
+                bias=bias,
                 padding=1,
                 stride=stride,
             ),
@@ -544,7 +550,7 @@ class BottleneckBlockDown2d(nn.Module):
                 in_channels=planes,
                 out_channels=out_channels,
                 kernel_size=1,
-                bias=False,
+                bias=bias,
                 padding=0,
                 stride=1,
             ),
@@ -564,7 +570,7 @@ class BottleneckBlockDown2d(nn.Module):
                         in_channels=in_channels,
                         out_channels=out_channels,
                         kernel_size=3,
-                        bias=False,
+                        bias=bias,
                         padding=1,
                         stride=stride,
                         groups=in_channels,
@@ -577,7 +583,7 @@ class BottleneckBlockDown2d(nn.Module):
                         in_channels=in_channels,
                         out_channels=out_channels,
                         kernel_size=3,
-                        bias=False,
+                        bias=bias,
                         padding=1,
                         stride=stride,
                     ),
@@ -590,7 +596,7 @@ class BottleneckBlockDown2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=1,
-                    bias=False,
+                    bias=bias,
                     padding=0,
                     stride=1,
                 ),
@@ -600,7 +606,7 @@ class BottleneckBlockDown2d(nn.Module):
             self.conv4 = None
 
         # Dropout2d can cover 2d.
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout2d(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):
@@ -653,6 +659,7 @@ class BottleneckBlockUpsample2d(nn.Module):
         seblock=False,
         sn=False,
         scale_factor=2,
+        bias=False,
     ):
         super().__init__()
 
@@ -669,6 +676,7 @@ class BottleneckBlockUpsample2d(nn.Module):
             downscale=False,
             seblock=seblock,
             sn=sn,
+            bias=bias,
         )
 
     def forward(self, x):
@@ -701,6 +709,7 @@ class BottleneckBlockUp2d(nn.Module):
         upscale=False,
         seblock=False,
         sn=False,
+        bias=False,
     ):
         super().__init__()
 
@@ -718,7 +727,7 @@ class BottleneckBlockUp2d(nn.Module):
                 in_channels=in_channels,
                 out_channels=planes,
                 kernel_size=1,
-                bias=False,
+                bias=bias,
                 padding=0,
                 stride=1,
             ),
@@ -732,7 +741,7 @@ class BottleneckBlockUp2d(nn.Module):
                 in_channels=planes,
                 out_channels=planes,
                 kernel_size=3,
-                bias=False,
+                bias=bias,
                 padding=1,
                 stride=stride,
                 output_padding=int(stride > 1),
@@ -747,7 +756,7 @@ class BottleneckBlockUp2d(nn.Module):
                 in_channels=planes,
                 out_channels=out_channels,
                 kernel_size=1,
-                bias=False,
+                bias=bias,
                 padding=0,
                 stride=1,
             ),
@@ -766,7 +775,7 @@ class BottleneckBlockUp2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=3,
-                    bias=False,
+                    bias=bias,
                     padding=1,
                     stride=stride,
                     output_padding=int(stride > 1),
@@ -780,7 +789,7 @@ class BottleneckBlockUp2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=1,
-                    bias=False,
+                    bias=bias,
                     padding=0,
                     stride=1,
                 ),
@@ -791,7 +800,7 @@ class BottleneckBlockUp2d(nn.Module):
             self.deconv4 = None
 
         # Dropout2d can cover 2d.
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout2d(dropout)
         self.act = getattr(F, activation)
 
     def forward(self, x):

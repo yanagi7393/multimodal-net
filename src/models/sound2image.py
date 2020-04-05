@@ -9,8 +9,12 @@ from modules.norms import NORMS, perform_sn
 
 
 class Generator(nn.Module):
-    def __init__(self, self_attention=True, sn=False, norm="BIN"):
+    def __init__(self, self_attention=True, sn=False, norm="BIN", dropout=0):
         super().__init__()
+
+        bias = False
+        if norm is None:
+            bias = True
 
         # DOWN:
         self.dn_block1 = FirstBlockDown2d(
@@ -21,6 +25,7 @@ class Generator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.dn_block2 = InvertedRes2d(
@@ -33,6 +38,7 @@ class Generator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.sa_layer1 = None
@@ -47,8 +53,9 @@ class Generator(nn.Module):
             activation="leaky_relu",
             normalization=norm,
             downscale=True,
-            seblock=False,
+            seblock=True,
             sn=sn,
+            bias=bias,
         )
 
         self.dn_block4 = InvertedRes2d(
@@ -61,6 +68,7 @@ class Generator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.dn_block5 = InvertedRes2d(
@@ -73,6 +81,7 @@ class Generator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.dn_block6 = InvertedRes2d(
@@ -85,6 +94,7 @@ class Generator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.global_avg_pool = nn.AdaptiveAvgPool2d([2, 2])
@@ -127,31 +137,34 @@ class Generator(nn.Module):
         self.up_block1 = BlockUpsample2d(
             in_channels=512,
             out_channels=256,
-            dropout=0,
+            dropout=dropout,
             activation="relu",
             normalization=norm,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.up_block2 = BlockUpsample2d(
             in_channels=256,
             out_channels=256,
-            dropout=0,
+            dropout=dropout,
             activation="relu",
             normalization=norm,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.up_block3 = BlockUpsample2d(
             in_channels=256,
             out_channels=128,
-            dropout=0,
+            dropout=dropout,
             activation="relu",
             normalization=norm,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.up_block4 = BlockUpsample2d(
@@ -162,6 +175,7 @@ class Generator(nn.Module):
             normalization=norm,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.up_block5 = BlockUpsample2d(
@@ -170,8 +184,9 @@ class Generator(nn.Module):
             dropout=0,
             activation="relu",
             normalization=norm,
-            seblock=False,
+            seblock=True,
             sn=sn,
+            bias=bias,
         )
 
         self.sa_layer2 = None
@@ -186,6 +201,7 @@ class Generator(nn.Module):
             normalization=norm,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.up_block7 = BlockUpsample2d(
@@ -196,6 +212,7 @@ class Generator(nn.Module):
             normalization=norm,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.last_norm = None
@@ -209,7 +226,7 @@ class Generator(nn.Module):
                 in_channels=16,
                 out_channels=3,
                 kernel_size=1,
-                bias=False,
+                bias=True,
                 padding=0,
                 stride=1,
             ),
@@ -296,8 +313,12 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, self_attention=True, sn=True, norm="IN"):
+    def __init__(self, self_attention=True, sn=True, norm=None):
         super().__init__()
+
+        bias = False
+        if norm is None:
+            bias = True
 
         # DOWN:
         self.dn_block1 = FirstBlockDown2d(
@@ -308,6 +329,7 @@ class Discriminator(nn.Module):
             downscale=False,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.dn_block2 = InvertedRes2d(
@@ -320,6 +342,7 @@ class Discriminator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.dn_block3 = InvertedRes2d(
@@ -332,6 +355,7 @@ class Discriminator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.sa_layer = None
@@ -346,8 +370,9 @@ class Discriminator(nn.Module):
             activation="leaky_relu",
             normalization=norm,
             downscale=True,
-            seblock=False,
+            seblock=True,
             sn=sn,
+            bias=bias,
         )
 
         self.dn_block5 = InvertedRes2d(
@@ -360,6 +385,7 @@ class Discriminator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.dn_block6 = InvertedRes2d(
@@ -372,6 +398,7 @@ class Discriminator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.dn_block7 = InvertedRes2d(
@@ -384,6 +411,7 @@ class Discriminator(nn.Module):
             downscale=True,
             seblock=False,
             sn=sn,
+            bias=bias,
         )
 
         self.last_norm = None
@@ -399,7 +427,7 @@ class Discriminator(nn.Module):
                 in_channels=512,
                 out_channels=1,
                 kernel_size=1,
-                bias=False,
+                bias=True,
                 padding=0,
                 stride=1,
             ),
