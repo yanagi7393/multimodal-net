@@ -45,15 +45,7 @@ MODEL_CONFIG = {
 }
 
 
-def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="cuda"):
-    # refine path with exp_dir
-    data_config = copy(DATA_CONFIG)
-    model_config = copy(MODEL_CONFIG)
-    if not set(config.keys()).issubset(set(model_config.keys())):
-        raise ValueError(f"{set(config.keys()) - set(model_config.keys())}")
-
-    model_config = {**model_config, **config}
-
+def _mutate_config_path(data_config, exp_dir):
     for key in [
         "mel_normalizer_savefile",
         "normalizer_dir",
@@ -61,10 +53,36 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
         "G_checkpoint_dir",
         "test_output_dir",
     ]:
-        data_config[key] = os.path.join(exp_dir, data_config[key])
+        if data_config[key][0] != "/":
+            data_config[key] = os.path.join(exp_dir, data_config[key])
 
         if "_dir" in key:
             os.makedirs(data_config[key], exist_ok=True)
+
+    return data_config
+
+
+def train(
+    data_dir,
+    test_data_dir,
+    d_config={},
+    m_config={},
+    exp_dir="./experiments",
+    device="cuda",
+):
+    # refine path with exp_dir
+    data_config = copy(DATA_CONFIG)
+    model_config = copy(MODEL_CONFIG)
+    if not set(m_config.keys()).issubset(set(model_config.keys())):
+        raise ValueError(f"{set(m_config.keys()) - set(model_config.keys())}")
+
+    if not set(d_config.keys()).issubset(set(data_config.keys())):
+        raise ValueError(f"{set(d_config.keys()) - set(data_config.keys())}")
+
+    data_config = {**data_config, **d_config}
+    model_config = {**model_config, **m_config}
+
+    data_config = _mutate_config_path(data_config, exp_dir)
 
     # for normalizer of mel
     mel_data_loader = None
@@ -97,7 +115,9 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
     }
 
     inverse_transforms = {
-        "frame": torchvision.transforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        "frame": torchvision.transforms.Normalize(
+            mean=[-1, -1, -1], std=[1 / 0.5, 1 / 0.5, 1 / 0.5]
+        )
     }
 
     # Define train_data loader
