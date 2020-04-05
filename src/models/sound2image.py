@@ -406,9 +406,6 @@ class Discriminator(nn.Module):
         # Dimention -> [B, 16, 128, 128]
         dn = self.dn_block2(dn)
 
-        # Get feature vector
-        feature_vec = dn
-
         # Dimention -> [B, 32, 64, 64]
         dn = self.dn_block3(dn)
 
@@ -429,6 +426,9 @@ class Discriminator(nn.Module):
 
         # Dimention -> [B, 512, 1, 1]
         dn = self.global_avg_pool(dn)
+
+        # Get feature vector
+        feature_vec = dn
 
         # Dimention -> [B, 1, 1, 1]
         dn = self.output(dn)

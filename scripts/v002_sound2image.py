@@ -36,11 +36,12 @@ MODEL_CONFIG = {
     "test_iter": 1,
     "save_iter": 1,
     "print_epoch": 10,
-    "test_epoch": 50,
-    "fm_lamba": 10,
+    "test_epoch": 500,
+    "recon_lambda": 10,
+    "fm_lambda": 10,
     "gp_lambda": 10,
     "g_norm": "BIN",
-    "d_norm": "IN",
+    "d_norm": "BIN",
 }
 
 
@@ -93,6 +94,10 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             dataloader=mel_data_loader,
             savefile_path=data_config["mel_normalizer_savefile"],
         ),
+    }
+
+    inverse_transforms = {
+        "frame": torchvision.transforms.Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     }
 
     # Define train_data loader
@@ -190,17 +195,19 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             D_real = D_real_out.view(-1).mean()
 
             gen_frames = netG(mel_data)
-            _, D_fake_out = netD(gen_frames.detach())
+            gen_frames_detached = gen_frames.detach()
+            _, D_fake_out = netD(gen_frames_detached)
             D_fake = D_fake_out.view(-1).mean()
 
             gp = calc_gp(
                 discriminator=netD,
                 real_images=data_dict["frame"],
-                fake_images=gen_frames.detach(),
+                fake_images=gen_frames_detached,
                 lambda_term=model_config["gp_lambda"],
                 device=device,
             )
 
+            # set loss
             wasserstein_D = D_real - D_fake
             d_loss = D_fake - D_real + gp
             d_loss.backward()
@@ -215,10 +222,15 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
 
             feature_fake, DG_fake_out = netD(gen_frames)
             DG_fake = DG_fake_out.view(-1).mean()
-            g_loss = (
-                (feature_real - feature_fake).view(-1).abs().mean()
-                * model_config["fm_lamba"]
-            ) - DG_fake
+
+            # set loss
+            recon_loss = (data_dict["frame"] - gen_frames).view(
+                -1
+            ).abs().mean() * model_config["recon_lambda"]
+            fm_loss = ((feature_real - feature_fake) ** 2).view(
+                -1
+            ).mean() * model_config["fm_lambda"]
+            g_loss = recon_loss + fm_loss - DG_fake
             g_loss.backward()
 
             optimizer_g.step()
@@ -226,7 +238,7 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
             if iter_ % model_config["print_iter"] == 0:
                 if idx % model_config["print_epoch"] == 0:
                     print(
-                        f"INFO: D_loss: {d_loss.item():4f} | G_loss: {g_loss.item():4f} | W_D: {wasserstein_D.item():4f}"
+                        f"INFO: D_loss: {d_loss.item():.2f} | G_loss: {g_loss.item():.2f} | W_D: {wasserstein_D.item():.2f} | REC: {recon_loss.item():.2f} | FM: {fm_loss.item():.2f}"
                     )
 
             if iter_ % model_config["test_iter"] == 0:
@@ -271,6 +283,7 @@ def train(data_dir, test_data_dir, config={}, exp_dir="./experiments", device="c
                         ),
                         dim=0,
                     )
+                    concat_frames = inverse_transforms["frame"](concat_frames)
                     concat_frames = torchvision.utils.make_grid(
                         concat_frames, nrow=2, padding=10
                     )
