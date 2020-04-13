@@ -46,6 +46,7 @@ MODEL_CONFIG = {
     "d_sn": True,
     "dropout": 0,
     "loss_type": "hinge",
+    "flip": False,
 }
 
 
@@ -223,15 +224,18 @@ def train(
         )
 
     # Data definitions
+    frame_transforms = [
+        torchvision.transforms.ToPILImage(),
+        torchvision.transforms.RandomHorizontalFlip(p=0.5),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ]
+    if model_config["flip"] is not True:
+        flip_transform = frame_transforms.pop(1)
+        assert isinstance(flip_transform, torchvision.transforms.RandomHorizontalFlip)
+
     transforms = {
-        "frame": torchvision.transforms.Compose(
-            [
-                torchvision.transforms.ToPILImage(),
-                torchvision.transforms.RandomHorizontalFlip(p=0.5),
-                torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-            ]
-        ),
+        "frame": torchvision.transforms.Compose(frame_transforms),
         "mel": MelNormalizer(
             dataloader=mel_data_loader,
             savefile_path=data_config["mel_normalizer_savefile"],
