@@ -10,6 +10,7 @@ FILENAME_TEMPLATE = {
     "audio": "{}_audio.npy",
     "log_mel_spec": "{}_log_mel_spec.npy",
     "mel_if": "{}_mel_if.npy",
+    "audio_label": "{}_audio_label.npy",
 }
 
 
@@ -18,7 +19,7 @@ class Dataset(Dataset):
         self,
         data_dir: str,
         transforms: Dict[str, Callable],
-        load_files: List[str] = ["frame", "log_mel_spec", "mel_if"],
+        load_files: List[str] = ["frame", "log_mel_spec", "mel_if", "audio_label"],
     ):
         self.filename_template = {
             data_type: FILENAME_TEMPLATE[data_type] for data_type in load_files

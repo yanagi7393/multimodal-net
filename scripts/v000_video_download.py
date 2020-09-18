@@ -4,6 +4,7 @@ import math
 from dataset_builder.utils import parallelize
 from urllib.error import HTTPError
 from tqdm import tqdm
+import time
 
 URL_PREFIX = "https://www.youtube.com/watch?v="
 
@@ -25,7 +26,13 @@ def download(video_code, output_path):
             pass
 
 
-def downloads(video_codes, save_dir="./", n_jobs=2):
+def downloads(video_codes, save_dir="./"):
+    for idx, video_code in tqdm(enumerate(video_codes)):
+        download(video_code, output_path=os.path.join(save_dir, f"{idx}.mp4"))
+        time.sleep(0.2)
+
+
+def downloads_parallel(video_codes, save_dir="./", n_jobs=2):
 
     for batch_idx in tqdm(range(int(math.ceil(len(video_codes) / n_jobs)))):
         output_path = os.path.join(save_dir, str(batch_idx // 10))

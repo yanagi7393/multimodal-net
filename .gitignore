@@ -3,6 +3,6 @@ __pycache__
 .pytest_cache
 .ipynb_checkpoints
 *.npy
-*.png
 *.mp3
 *.mp4
+.env

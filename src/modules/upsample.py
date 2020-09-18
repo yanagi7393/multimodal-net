@@ -10,5 +10,7 @@ class Upsample(nn.Module):
         self.mode = mode
 
     def forward(self, x):
-        x = F.interpolate(x, scale_factor=self.scale_factor, mode=self.mode)
+        x = F.interpolate(
+            x, scale_factor=self.scale_factor, mode=self.mode, align_corners=True
+        )
         return x

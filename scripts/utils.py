@@ -5,26 +5,28 @@ from glob import glob
 from modules.norms import _BatchInstanceNorm2d
 
 
-def save_model(model, dir, iter):
+def save_model(model, dir, epoch):
     os.makedirs(dir, exist_ok=True)
-    torch.save(model.state_dict(), os.path.join(dir, f"checkpoint-{iter}"))
+    torch.save(model.state_dict(), os.path.join(dir, f"checkpoint-{epoch}"))
 
-    print("[+] Model is saved")
+    print(f"[+] Model is saved. Epoch: {epoch}")
 
 
-def load_model(model, dir, load_iter=None):
+def load_model(model, dir, load_epoch=None, strict=True):
     if not os.path.isdir(dir):
         print("[!] Load is failed")
         return -1
 
-    # If load_iter has value
-    if load_iter is not None:
-        if load_iter == -1:
+    # If load_epoch has value
+    if load_epoch is not None:
+        if load_epoch == -1:
             print("[!] Load is failed")
             return -1
 
-        model.load_state_dict(torch.load(os.path.join(dir, f"checkpoint-{load_iter}")))
-        return load_iter
+        model.load_state_dict(
+            torch.load(os.path.join(dir, f"checkpoint-{load_epoch}")), strict=strict
+        )
+        return load_epoch
 
     check_points = glob(os.path.join(dir, "checkpoint-*"))
     check_points = sorted(
@@ -38,7 +40,7 @@ def load_model(model, dir, load_iter=None):
 
     check_point = check_points[-1]
 
-    model.load_state_dict(torch.load(check_point))
+    model.load_state_dict(torch.load(check_point), strict=strict)
     print("[+] Model is loaded")
 
     return int(check_point.split("/")[-1].replace("checkpoint-", ""))
@@ -66,11 +68,11 @@ def calc_gp(discriminator, real_images, fake_images, lambda_term=10, device="cpu
     interpolated = (alpha * real_images + ((1 - alpha) * fake_images)).requires_grad_(
         True
     )
-    _, prob_interpolated = discriminator(interpolated)
-    grad_outputs = torch.ones(prob_interpolated.size()).to(device)
+    _, probs_interpolated = discriminator(interpolated)
+    grad_outputs = torch.ones(probs_interpolated[0].size()).to(device)
 
     gradients = torch.autograd.grad(
-        outputs=prob_interpolated,
+        outputs=probs_interpolated[0],
         inputs=interpolated,
         grad_outputs=grad_outputs,
         create_graph=True,
