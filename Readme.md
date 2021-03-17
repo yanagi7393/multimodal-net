@@ -1,7 +1,7 @@
 ## Project1: Sound -> Image
 
 
-`This is the schdema of the model I thought of. It may be different from the current model structure. This project started with a motivation to build end-to-end model perform sound to image. Last contributions: https://openreview.net/forum?id=SJxJtiRqt7`
+`This project started with a motivation to build end-to-end model perform sound to image. Last contributions: https://openreview.net/forum?id=SJxJtiRqt7`
 ![model Image 1](model.png)
 
 ### Implementations
